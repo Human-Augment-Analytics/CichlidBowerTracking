@@ -85,6 +85,7 @@ class DataDistillationPreparer:
     def save_as_json(self) -> bool:
         '''
         Inputs: none.
+        
         Returns: a Boolean indicating if the bboxes dictionary was successfully saved as a JSON file.
         '''
 
