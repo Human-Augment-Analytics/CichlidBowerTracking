@@ -1,5 +1,5 @@
 import os, subprocess, pdb, platform, shutil
-from cichlid_bower_tracking.helper_modules.log_parser import LogParser as LP
+from helper_modules.log_parser import LogParser as LP
 import pandas as pd 
 
 class FileManager():

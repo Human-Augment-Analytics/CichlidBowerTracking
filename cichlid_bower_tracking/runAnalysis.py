@@ -1,6 +1,6 @@
 import argparse, subprocess, pdb, datetime, os, sys
 import pandas as pd
-from cichlid_bower_tracking.helper_modules.file_manager import FileManager as FM
+from helper_modules.file_manager import FileManager as FM
 
 # This code ensures that modules can be found in their relative directories
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

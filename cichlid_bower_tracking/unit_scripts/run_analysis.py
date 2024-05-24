@@ -1,7 +1,7 @@
 # Things to add
 
-import argparse,sys,pdb
-from cichlid_bower_tracking.helper_modules.file_manager import FileManager as FM
+import argparse, sys, pdb, subprocess
+from helper_modules.file_manager import FileManager as FM
 
 parser = argparse.ArgumentParser()
 parser.add_argument('AnalysisType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish','AddFishSex','Summary','All'], help = 'What type of analysis to perform')
@@ -16,13 +16,13 @@ fm_obj = FM(args.AnalysisID, projectID = args.ProjectID, check = True)
 
 # Run appropriate analysis script
 if args.AnalysisType == 'Prep':
-	from cichlid_bower_tracking.data_preparers.prep_preparer import PrepPreparer as PrP
+	from data_preparers.prep_preparer import PrepPreparer as PrP
 	prp_obj = PrP(fm_obj)
 	prp_obj.validateInputData()
 	prp_obj.prepData()
 
 elif args.AnalysisType == 'Depth':
-	from cichlid_bower_tracking.data_preparers.depth_preparer import DepthPreparer as DP
+	from data_preparers.depth_preparer import DepthPreparer as DP
 	dp_obj = DP(fm_obj)
 	dp_obj.validateInputData()
 	dp_obj.createSmoothedArray()
@@ -30,7 +30,7 @@ elif args.AnalysisType == 'Depth':
 	dp_obj.createRGBVideo()
 
 elif args.AnalysisType == 'Cluster':
-	from cichlid_bower_tracking.data_preparers.cluster_preparer import ClusterPreparer as CP
+	from data_preparers.cluster_preparer import ClusterPreparer as CP
 
 	if args.VideoIndex is None:
 		videos = list(range(len(fm_obj.lp.movies)))
@@ -43,16 +43,16 @@ elif args.AnalysisType == 'Cluster':
 		cp_obj.runClusterAnalysis()
 
 elif args.AnalysisType == 'ClusterClassification':
-	from cichlid_bower_tracking.data_preparers.threeD_classifier_preparer import ThreeDClassifierPreparer as TDCP
+	from data_preparers.threeD_classifier_preparer import ThreeDClassifierPreparer as TDCP
 
-	tdcp_obj = TDCP(self.fileManager)
+	tdcp_obj = TDCP(fm_obj)
 	tdcp_obj.validateInputData()
 	tdcp_obj.predictLabels()
 	tdcp_obj.createSummaryFile()
 
 elif args.AnalysisType == 'TrackFish':
 	import GPUtil
-	from cichlid_bower_tracking.data_preparers.fish_tracking_preparer import FishTrackingPreparer as FTP
+	from data_preparers.fish_tracking_preparer import FishTrackingPreparer as FTP
 	
 	"""
 	# Identify videos to process
@@ -96,7 +96,7 @@ elif args.AnalysisType == 'TrackFish':
 			raise Exception('SORT Error')
 
 	"""
-	from cichlid_bower_tracking.data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
+	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
 	ctap_obj = CTAP(fm_obj)
 	#ctap_obj.summarizeTracks()
 	#ctap_obj.associateClustersWithTracks()
@@ -106,8 +106,8 @@ elif args.AnalysisType == 'TrackFish':
 
 elif args.AnalysisType == 'AddFishSex':
 	p1 = subprocess.run(
-		['python3', '-m', 'cichlid_bower_tracking.unit_scripts.add_fish_sex', projectID, args.AnalysisID])
+		['python3', '-m', 'cichlid_bower_tracking.unit_scripts.add_fish_sex', args.projectID, args.AnalysisID])
 elif args.AnalysisType == 'Summary':
 	p1 = subprocess.Popen(
-			['python3', '-m', 'cichlid_bower_tracking.unit_scripts.summarize', projectID, '--SummaryFile', args.AnalysisID])
+			['python3', '-m', 'cichlid_bower_tracking.unit_scripts.summarize', args.projectID, '--SummaryFile', args.AnalysisID])
 
