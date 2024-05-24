@@ -110,4 +110,3 @@ elif args.AnalysisType == 'AddFishSex':
 elif args.AnalysisType == 'Summary':
 	p1 = subprocess.Popen(
 			['python3', '-m', 'cichlid_bower_tracking.unit_scripts.summarize', args.projectID, '--SummaryFile', args.AnalysisID])
-

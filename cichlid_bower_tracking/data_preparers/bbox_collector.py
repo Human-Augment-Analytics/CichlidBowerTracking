@@ -11,7 +11,7 @@ np.random.seed(0)
 IMG_W = 1296
 IMG_H = 972
 
-class DataDistillationPreparer:
+class BBoxCollector:
     def __init__(self, fm: FileManager, videoIndex: int, tracks_file: str, bboxes_dir: str, filename: str):
         '''
         Create and initialize an instance of the DataDistillationPreparer class.
