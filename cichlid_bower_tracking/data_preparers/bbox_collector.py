@@ -106,6 +106,8 @@ class BBoxCollector:
 
                 self.save_bbox(video[frame_idx, :, :, :], x_center, y_center, width, height, track_id)
 
+        return True
+
 
     def save_as_json(self) -> bool:
         '''
