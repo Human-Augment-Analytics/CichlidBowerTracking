@@ -81,7 +81,7 @@ class FileManager():
         # Filter out projects if optional argment given
         if filtered_projectIDs is not None:
             for projectID in projectIDs:
-                if projectID not in fil_projectIDs:
+                if projectID not in filtered_projectIDs:
                     projectIDs.remove(projectID)
         return projectIDs
 

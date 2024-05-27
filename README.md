@@ -2,11 +2,13 @@
 
 <!-- omit in toc -->
 ## Table of Contents
- - [How to Install](#how-to-install)
+ - [How to Setup Conda Environment](#how-to-setup-conda-environment)
    - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86)
+ - [How to Setup Rclone Remote](#how-to-setup-rclone-remote)
+   - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86-1)
  - [References](#references)
 
-## How to Install
+## How to Setup Conda Environment
 
 This section explains how to setup the environment used by this repo. If your preferred method isn't listed here, please feel free to add the step-by-step process here.
 
@@ -26,6 +28,18 @@ This section explains how to setup the environment used by this repo. If your pr
 12. Traverse to the desired directory in your file system and clone this repo using `git clone https://github.com/charlesrclark1243/CichlidBowerTracking.git`. 
 13. Setup the environment by entering the command `conda env create -f cichlidbowertracking.yml` [3](https://stackoverflow.com/a/59686678).
 14. If you get the error `CondaSSLError: Encountered an SSL error. Most likely a certificate verification issue.` try running the previous command again and it will likely pickup with the setup exactly where it left off before the error.
+
+## How to Setup Rclone Remote
+
+This section explains how to setup the rclone remote used to connect to the Dropbox. If your preferred method isn't listed here, please feel free to add the step-by-step process here.
+
+### Windows WSL2 (Ubuntu x86)
+
+1. Install rclone using the Ubuntu command line, e.g., `sudo apt install`.
+2. Download the `rclone` file from `BioSci-McGrath/Apps/CichlidPiData/__CredentialFiles/` Dropbox directory.
+3. Move the downloaded `rclone` file from your Windows Downloads folder to `/home/<wsl-user>/.config/rclone/`.
+4. Run the command `rclone config` and rename the rclone remote from `cichlidVideo` to `CichlidPiData`.
+5. Reconnect to the rclone remote by running `rclone config reconnect CichlidPiData:` and following the provided prompts.
 
 ## References
 1. "Miniconda: Quick command line install," docs.anaconda.com. [https://docs.anaconda.com/free/miniconda/#quick-command-line-install](https://docs.anaconda.com/free/miniconda/#quick-command-line-install).
