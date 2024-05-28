@@ -18,7 +18,7 @@ class PerPixelAverage():
         self.width = width
         self.height = height
 
-        self.sum = torch.empty((channels, width, height), dtype=dtype)
+        self.sum = torch.empty((channels, height, width), dtype=dtype)
         self.counter = 0
 
     def add(self, scl_bbox: torch.Tensor) -> None:
