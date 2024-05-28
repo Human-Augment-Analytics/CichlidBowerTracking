@@ -1,6 +1,6 @@
 from helper_modules.file_manager import FileManager
 from torchvision.transforms.functional import rotate, resize, InterpolationMode
-from torchvision.io import read_video # to be used in actually reading the video file once I have a better understanding of how the FileManager works
+from torchvision.io import read_video 
 import numpy as np
 import pandas as pd
 import torch
