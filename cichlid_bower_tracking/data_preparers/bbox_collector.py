@@ -1,9 +1,11 @@
 from helper_modules.file_manager import FileManager
+from torchvision.transforms.functional import rotate, resize, InterpolationMode
 from torchvision.io import read_video # to be used in actually reading the video file once I have a better understanding of how the FileManager works
 import numpy as np
 import pandas as pd
 import torch
 import json
+import math
 
 np.random.seed(0)
 
@@ -33,17 +35,96 @@ class BBoxCollector:
         self.filename = filename
 
         # dictionary to store each track_id's list of bboxes as well as the maximum dimension lengths (height and width)
-        self.bboxes = {
-            'bboxes': dict(),
-            'max_width': 0,
-            'max_height': 0
-        }
+        self.bboxes = dict()
 
-    def save_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, track_id: int) -> bool:
+    def _get_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int) -> torch.Tensor:
+        '''
+        Carves a PyTorch Tensor representing the bounding box centered at (x_center, y_center) with dimensions (width, height) out of the passed
+        frame Tensor. The carved out bbox is slightly larger than necessary to ensure the entire fish body remains in the image after rotation.
+        Based on Bree's cropping method, which she sent to me via email.
+
+        Inputs:
+            frame: a PyTorch Tensor representing a video frame which contains the bbox to be carved out.
+            x_center: the x-coordinate of the bbox's center, as calculated during YOLO.
+            y_center: the y-coordinate of the bbox's upper-left corner, as calculated during YOLO.
+            width: the width of the bbox to be saved, as calculated during YOLO.
+            height: the width of the bbox to be saved, as calculated during YOLO.
+
+        Returns: a PyTorch Tensor representing the bbox carved out of the passed frame Tensor.
+        '''
+        
+        # store the longest dimension length like in Bree's cropping method
+        max_dim = max(int(width) + 1, int(height) + 1)
+
+        # get bbox coordinates based on Bree's cropping method (PyTorch instead of openCV)
+        x_upperleft = int(max(0, x_center - (max_dim)))
+        y_upperleft = int(max(0, y_center - (max_dim)))
+
+        x_lowerright = int(max(0, x_center + (max_dim)))
+        y_lowerright = int(max(0, y_center + (max_dim)))
+
+        # get and return bbox by slicing passed frame
+        bbox = frame[:, x_upperleft:x_lowerright + 1, y_upperleft:y_lowerright + 1]
+        
+        return bbox
+
+    def _rotate_bbox(self, bbox: torch.Tensor, x_dot: float, y_dot: float, mode_str='bilinear') -> torch.Tensor:
+        '''
+        Rotates the passed in bbox PyTorch Tensor based on the fish's x-dimensional and y-dimensional velocities, as determined by the
+        Kalman Filter during SORT. Inherently assumes that cichlids only swim in the direction which they are facing with their heads.
+
+        Inputs:
+            bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
+            x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file.
+            y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file.
+            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+
+        Returns: A PyTorch Tensor representing the rotated bbox.
+        '''
+        # use trig to determine the angle of rotation (convert to degrees)
+        theta = math.atan2(y_dot, x_dot) * (180.0 / math.pi)
+
+        # define the interpolation mode
+        if mode_str == 'nearest':
+            mode = InterpolationMode.NEAREST
+        elif mode_str == 'nearest_exact':
+            mode = InterpolationMode.NEAREST_EXACT
+        else:
+            mode = InterpolationMode.BILINEAR
+
+        # perform rotation and return the resulting bbox
+        rot_bbox = rotate(bbox, theta, mode)
+
+        return rot_bbox
+    
+    def _resize_bbox(self, bbox: torch.Tensor, dim: int, mode_str='bilinear') -> torch.Tensor:
+        '''
+        Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed to the dim parameter. 
+
+        Inputs:
+            bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
+            dim: an int value indicating the final dimension length the resized bbox image should have.
+            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+
+        Returns: a PyTorch Tensor representing the resized bbox image.            
+        '''
+        # define the interpolation mode
+        if mode_str == 'nearest':
+            mode = InterpolationMode.NEAREST
+        elif mode_str == 'nearest_exact':
+            mode = InterpolationMode.NEAREST_EXACT
+        else:
+            mode = InterpolationMode.BILINEAR
+
+        # perform the resize and return the resulting bbox
+        resz_bbox = resize(bbox, (dim, dim), mode)
+
+        return resz_bbox
+
+    def _save_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, x_dot: float, y_dot: float, resz_dim: int, track_id: int, mode_str='bilinear') -> bool:
         '''
         Saves the bounding box in the passed video frame with center (x_center, y_center), and dimensions (width, height) to the bboxes 
-        dictionary. Also stores the maximum width and maximum height in the bboxes dictionary, which will be used the determine the necessary
-        padding for every saved bounding box before averaging them as a means of data distillation.
+        dictionary.
 
         Inputs:
             frame: PyTorch Tensor of shape (C, H, W) containing a specific video frame.
@@ -51,31 +132,25 @@ class BBoxCollector:
             y_center: the y-coordinate of the bbox's upper-left corner, as calculated during YOLO.
             width: the width of the bbox to be saved, as calculated during YOLO.
             height: the width of the bbox to be saved, as calculated during YOLO.
+            x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file.
+            y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file.
+            resz_dim: an int value indicating the final dimension length the resized bbox image should have.
             track_id: the track ID associated with the bbox to be saved, as stored in the tracks dataset.
+            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
 
         Returns: A Boolean indicating if the bbox was successfully stored in the bboxes dictionary.
         '''
 
-        # same scaling method as in SortFish class
-        x_center_scl, y_center_scl = x_center * IMG_W, y_center * IMG_H
-        width_scl, height_scl = width * IMG_W, height * IMG_H
-
-        # same bounding method as in SortFish class
-        x_upperleft, y_upperleft = x_center_scl - width_scl / 2, y_center_scl - height_scl / 2
-        x_lowerright, y_lowerright = x_center_scl + width_scl / 2, y_center_scl + height_scl / 2
-
-        # define bbox using previously calculated bounds
-        bbox = frame[:, y_upperleft:y_lowerright + 1, x_upperleft:x_lowerright + 1].detach().numpy().tolist()
+        # pass frame through bbox extraction and transformation pipeline
+        bbox = self._get_bbox(frame, x_center, y_center, width, height)
+        rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
+        resz_bbox = self._resize_bbox(rot_bbox, resz_dim, mode_str)
         
-        # save bbox to dictionary
-        if track_id in list(self.bboxes['bboxes'].keys()):
-            self.bboxes['bboxes'][track_id].append(bbox)
+        # save transformed bbox to dictionary
+        if track_id in list(self.bboxes.keys()):
+            self.bboxes[track_id].append(resz_bbox)
         else:
-            self.bboxes['bboxes'][track_id] = [bbox]
-
-        # save largest dimension to the dictionary if it's larger than current max_dim
-        self.bboxes['max_width'] = max(self.bboxes['max_width'], width)
-        self.bboxes['max_height'] = max(self.bboxes['max_height'], height)
+            self.bboxes[track_id] = [resz_bbox]
 
         return True
     
@@ -95,7 +170,7 @@ class BBoxCollector:
 
         # iterate by track_id
         for track_id in track_ids:
-            tmp_df = tracks_df[tracks_df['track_id'] == track_id][['frame', 'xc', 'yc', 'w', 'h']]
+            tmp_df = tracks_df[tracks_df['track_id'] == track_id][['frame', 'xc', 'yc', 'w', 'h', 'u_dot', 'v_dot']]
 
             for _, row in tmp_df.iterrows():
                 # get the specific frame from the video Tensor, bbox info from the tracking data and pass to save_bbox to save the bbox
@@ -104,10 +179,11 @@ class BBoxCollector:
                 x_center, y_center = row['xc'], row['yc']
                 width, height = row['w'], row['h']
 
-                self.save_bbox(video[frame_idx, :, :, :], x_center, y_center, width, height, track_id)
+                x_dot, y_dot = row['u_dot'], row['v_dot']
+
+                self._save_bbox(video[frame_idx, :, :, :], x_center, y_center, width, height, x_dot, y_dot, 100, track_id)
 
         return True
-
 
     def save_as_json(self) -> bool:
         '''
@@ -122,7 +198,7 @@ class BBoxCollector:
         with open(f'{self.bboxes_dir}/{self.filename}.json', 'w') as file:
             json.dumps(self.bboxes, file)
 
-        return True 
+        return True
 
     def run(self) -> bool:
         '''

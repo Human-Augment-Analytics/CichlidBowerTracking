@@ -1,7 +1,7 @@
 import subprocess, argparse, pdb
 import pandas as pd
 
-from cichlid_bower_tracking.helper_modules.file_manager import FileManager as FM
+from helper_modules.file_manager import FileManager as FM
 
 parser = argparse.ArgumentParser(description='This script is used to determine analysis states for each project.')
 parser.add_argument('AnalysisID', type = str, help = 'AnalysisID of the set of projects that you want to analyze. There must be a csv file already created in __AnalysisStates directory')
@@ -14,6 +14,8 @@ summary_file = fm_obj.localSummaryFile
 fm_obj.downloadData(summary_file)
 dt = pd.read_csv(summary_file, index_col=False)
 projectIDs = list(dt.projectID)
+
+print(f'projectIDs list:\n{projectIDs}\n')
 
 columns = ['projectID', 'Notes', 'tankID', 'RunAnalysis', 'StartingFiles', 'Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'Summary']
 
@@ -45,5 +47,3 @@ for projectID in projectIDs:
 
 dt.to_csv(summary_file, index = False)
 fm_obj.uploadData(summary_file)
-
-
