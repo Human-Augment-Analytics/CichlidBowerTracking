@@ -13,6 +13,9 @@ np.random.seed(0)
 IMG_W = 1296
 IMG_H = 972
 
+# hyperparams...
+RESZ_DIM = 100
+
 class BBoxCollector:
     def __init__(self, fm: FileManager, videoIndex: int, tracks_file: str, bboxes_dir: str, filename: str):
         '''
@@ -184,7 +187,7 @@ class BBoxCollector:
 
                 x_dot, y_dot = row['u_dot'], row['v_dot']
 
-                self._save_bbox(video[frame_idx, :, :, :], x_center, y_center, width, height, x_dot, y_dot, 100, track_id)
+                self._save_bbox(video[frame_idx, :, :, :], x_center, y_center, width, height, x_dot, y_dot, RESZ_DIM, track_id)
 
         return True
 
