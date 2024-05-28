@@ -23,7 +23,7 @@ class PerPixelAverage():
 
     def add(self, scl_bbox: torch.Tensor) -> None:
         '''
-        Adds a PyTorch Tensor of shape (self.channels, self.width, self.height) to the current sum of bbox images. Also increments the image counter.
+        Adds a PyTorch Tensor of shape (self.channel, self.height, self.width) to the current sum of bbox images. Also increments the image counter.
 
         Inputs:
             scl_frame: a PyTorch Tensor representing the pixel values of a scaled (resized) bbox image.
@@ -31,7 +31,7 @@ class PerPixelAverage():
         Returns: None.
         '''
 
-        assert scl_bbox.shape == (self.channels, self.width, self.height) # assume fixed size for bbox images
+        assert scl_bbox.shape == (self.channels, self.height, self.width) # assume fixed size for bbox images
 
         self.sum += scl_bbox
         self.counter += 1
