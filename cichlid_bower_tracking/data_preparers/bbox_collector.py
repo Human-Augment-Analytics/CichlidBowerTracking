@@ -29,7 +29,7 @@ class BBoxCollector:
             filename: the desired name for the JSON file.
         '''
         
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.2.1'
         self.fm = fm
         self.videoObj = self.fm.returnVideoObject(videoIndex)
         self.videoIndex = videoIndex
@@ -86,7 +86,7 @@ class BBoxCollector:
         '''
 
         # use trig to determine the angle of rotation (convert to degrees)
-        theta = math.atan2(y_dot, x_dot) * (180.0 / math.pi)
+        theta = -math.atan2(y_dot, x_dot) * (180.0 / math.pi)
 
         # define the interpolation mode
         if mode_str == 'nearest':
