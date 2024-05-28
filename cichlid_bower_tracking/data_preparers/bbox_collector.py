@@ -81,6 +81,7 @@ class BBoxCollector:
 
         Returns: A PyTorch Tensor representing the rotated bbox.
         '''
+
         # use trig to determine the angle of rotation (convert to degrees)
         theta = math.atan2(y_dot, x_dot) * (180.0 / math.pi)
 
@@ -108,6 +109,7 @@ class BBoxCollector:
 
         Returns: a PyTorch Tensor representing the resized bbox image.            
         '''
+
         # define the interpolation mode
         if mode_str == 'nearest':
             mode = InterpolationMode.NEAREST
@@ -164,6 +166,7 @@ class BBoxCollector:
         
         Returns: a Boolean indicating if the complete iteration through the video Tensor was successful.
         '''
+
         # read tracks data from tracks file built by SortFish class
         tracks_df = pd.read_csv(self.tracks_file)
         track_ids = tracks_df['track_id'].unique().tolist()
@@ -209,16 +212,9 @@ class BBoxCollector:
         Returns: a Boolean indicating that the data distillation preparer was successfully run.
         '''
 
-        # ========================================================================================
-        # TODO:
-        #
-        # handle conversion from self.videoObj to Tensor, likely using PyTorch read_video function
-        # ========================================================================================
+        # handle conversion from self.videoObj to Tensor using the PyTorch read_video function
+        video = read_video(self.videoObj.localVideoFile, output_format='TCHW')
 
-        video = torch.rand(600, 3, IMG_H, IMG_W) # placeholder
-
-        # ========================================================================================
-        
         # iteratively save bboxes to dictionary
         self.iterate(video=video)
 
