@@ -42,17 +42,17 @@ else:
 uploadProcesses = [] # Keep track of all of the processes still uploading so we don't quit before they finish
 
 print('Downloading: ' + projectIDs[0] + ' ' + str(datetime.datetime.now()), flush = True)
-subprocess.run(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
+subprocess.run(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
 while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
     print('Running: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
-    p1 = subprocess.Popen(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID])
+    p1 = subprocess.Popen(['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID])
 
     # Download data for the next project in the background
     if len(projectIDs) != 0:
         print('Downloading: ' + projectIDs[0] + ' ' + str(datetime.datetime.now()), flush = True)
-        p2 = subprocess.Popen(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
+        p2 = subprocess.Popen(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
 
     # Pause script until current analysis is complete and data for next project is downloaded
     p1.communicate()
@@ -72,7 +72,7 @@ while len(projectIDs) != 0:
     #Upload data and keep track of it
     print('Uploading: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
     #uploadProcesses.append(subprocess.Popen(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.upload_data', args.AnalysisType, args.AnalysisID, projectID]))
-    uploadProcesses.append(subprocess.Popen(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.upload_data', args.AnalysisType, '--Delete', args.AnalysisID, projectID]))
+    uploadProcesses.append(subprocess.Popen(['python3', '-m', 'unit_scripts.upload_data', args.AnalysisType, '--Delete', args.AnalysisID, projectID]))
 
 for i,p in enumerate(uploadProcesses):
     print('Finishing uploading process ' + str(i) + ': ' + str(datetime.datetime.now()), flush = True)

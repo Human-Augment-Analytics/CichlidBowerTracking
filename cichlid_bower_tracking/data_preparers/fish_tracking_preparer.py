@@ -17,7 +17,6 @@ class FishTrackingPreparer():
 		self.fileManager.downloadData(self.fileManager.localYolov5WeightsFile)
 
 	def validateInputData(self):
-		
 		assert os.path.exists(self.videoObj.localVideoFile)
 
 		assert os.path.exists(self.fileManager.localTroubleshootingDir)

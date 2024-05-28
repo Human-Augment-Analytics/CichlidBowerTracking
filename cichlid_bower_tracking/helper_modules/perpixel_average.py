@@ -13,6 +13,7 @@ class PerPixelAverage():
             dtype: a PyTorch datatype used in defining the sum Tensor; defaults to torch.int64, only change to another PyTorch integer type when less precision is required.
         '''
 
+        self.__version__ = '0.1.0'
         self.channels = channels
         self.width = width
         self.height = height

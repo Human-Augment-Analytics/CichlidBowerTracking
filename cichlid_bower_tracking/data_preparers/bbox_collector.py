@@ -29,7 +29,7 @@ class BBoxCollector:
             filename: the desired name for the JSON file.
         '''
         
-        self.__version__ = '0.1.2'
+        self.__version__ = '0.2.0'
         self.fm = fm
         self.videoObj = self.fm.returnVideoObject(videoIndex)
         self.videoIndex = videoIndex
