@@ -1,14 +1,21 @@
 version: '3.8'
 services:
   app:
+    # using the latest-gui image from the deeplabcut repository
     image: deeplabcut/deeplabcut:latest-gui
     build:
+      # sets the context folder to the folder the docker-compose is located in
       context: .
+      # links the build to the dockerfile
       dockerfile: Dockerfile
     volumes:
+      # mounts the current working directory as the workspace folder within the container
       - ${PWD}:/workspace
+      # allows you to connect the X server to the container
       - /tmp/.X11-unix:/tmp/.X11-unix
     environment:
+      # sets the display variable to be the host.docker.internal:0.0, which allows the GUI to be routed
+      # to the X server in order to be launched locally
       - DISPLAY=host.docker.internal:0.0
     tty: true
     network_mode: "host"
