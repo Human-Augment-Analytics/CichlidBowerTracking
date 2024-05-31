@@ -1,0 +1,3 @@
+[submodule "ImageProcessing"]
+	path = ImageProcessing
+	url = https://github.com/athomas125/ImageProcessing.git

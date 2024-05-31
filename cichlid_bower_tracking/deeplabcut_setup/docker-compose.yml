@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  app:
+    image: deeplabcut/deeplabcut:latest-gui
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ${PWD}:/workspace
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=host.docker.internal:0.0
+    tty: true
+    network_mode: "host"
