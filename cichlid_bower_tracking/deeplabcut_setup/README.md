@@ -53,6 +53,6 @@ The steps below walk through how to train a DLC model on google colab.
 	using the same version of python between your local setup that generated this file
 	and google colab. I had to update it from python3.8 to python3.10
 5. To run on a GPU, select the desired runtime in the top right corner of the colab notebook
-	- ![select runtime](walkthrough_images/runtime_selection.png)
+	- ![select runtime](walkthrough_images/colab_runtime.png)
 6. run the Google colab notebook 
 
