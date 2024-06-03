@@ -33,7 +33,7 @@ class DataDistiller:
         self.avg_imgs_dir = avg_imgs_dir
         self.npz_filename = npz_filename
 
-        self.collector = BBoxCollector(self.fm, self.video_file, self.tracks_file)
+        self.collector = BBoxCollector(self.video_file, self.tracks_file, self.dim)
 
     def _compute_avgs(self, bboxes: Dict) -> Dict:
         '''
