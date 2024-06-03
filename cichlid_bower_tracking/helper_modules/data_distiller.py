@@ -75,9 +75,11 @@ class DataDistiller:
         '''
         Runs the data distillation image-averaging pipeline from start to finish.
 
-        Returns: none.
+        Returns: a Boolean indicating that the data distillation process was successfully run.
         '''
         bboxes = self.collector.run()
         
         avg_imgs = self._compute_avgs(bboxes)
         self._save_avg_imgs(avg_imgs)
+
+        return True
