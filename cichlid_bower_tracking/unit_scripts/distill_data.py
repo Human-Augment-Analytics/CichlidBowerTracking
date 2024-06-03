@@ -1,9 +1,16 @@
+# ==================================================================================================================
+# This script is called as a subprocess of the runAnalysis.py script.
+#
+# It performs the data distillation (just image averaging for now) procedure on the passed video.
+# ==================================================================================================================
+
 from helper_modules.data_distiller import DataDistiller
 import argparse, datetime
 from torch import uint8, uint16, uint32, uint64
 
 # init argument parser and parse arguments
 parser = argparse.ArgumentParser(usage='This script runs a data distiller on the specified video file.')
+
 parser.add_argument('VideoFile', type=str, help='This is the filepath of the video to be used in image-averaging data distillation.')
 parser.add_argument('TracksFile', type=str, help='This is the filepath of the tracks CSV file to be used in cropping bboxes from the passed video.')
 parser.add_argument('AvgImgDirectory', type=str, help='This is the path to the directory in which the average images will be saved.')
