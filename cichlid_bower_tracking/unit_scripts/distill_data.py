@@ -26,13 +26,13 @@ dim = args.dim
 npz_filename = f'videoidx-{video_idx}-avg-imgs'
 
 if args.precision == 8:
-    dtype=uint8
+    dtype = uint8
 elif args.precision == 16:
-    dtype=uint16
+    dtype = uint16
 elif args.precision == 32:
-    dtype=uint32
+    dtype = uint32
 else:
-    dtype=uint64
+    dtype = uint64
 
 # initialize data distiller and run distillation (image averaging)
 distiller = DataDistiller(video_file=video_file, tracks_file=tracks_file, channels=channels, dim=dim, avg_imgs_dir=avg_imgs_dir, npz_filename=npz_filename, dtype=dtype)
