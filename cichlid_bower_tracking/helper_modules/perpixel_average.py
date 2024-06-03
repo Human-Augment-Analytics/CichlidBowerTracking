@@ -1,7 +1,7 @@
 import torch
 
 class PerPixelAverage():
-    def __init__(self, channels: int, width: int, height: int, dtype=torch.int64):
+    def __init__(self, channels: int, width: int, height: int, dtype=torch.uint64):
         '''
         Initializes an instance of the PerPixelAverage class. Uses the inputs to define an empty PyTorch Tensor to contain the sum of pixel values,
         and a counter to represent the number of bboxes that are included in the sum.
@@ -10,7 +10,7 @@ class PerPixelAverage():
             channels: an int representing the number of channels to be considered; for an RGB image, should be 3.
             width: an int representing a fixed width used in constructing the average image.
             height: an int representing a fixed height used in constructing the average image.
-            dtype: a PyTorch datatype used in defining the sum Tensor; defaults to torch.int64, only change to another PyTorch integer type when less precision is required.
+            dtype: a PyTorch datatype used in defining the sum Tensor; defaults to torch.uint64, only change to another PyTorch integer type when less precision is required.
         '''
 
         self.__version__ = '0.1.0'
