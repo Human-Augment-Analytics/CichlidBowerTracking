@@ -106,7 +106,7 @@ elif args.AnalysisType == 'AddFishSex':
 		['python3', '-m', 'cichlid_bower_tracking.unit_scripts.add_fish_sex', args.projectID, args.AnalysisID])
 	
 elif args.AnalysisType == 'AvgImgDistillation':	
-	CHANNELS = 3 # channels hyperparameter (should be either 1 if Greyscale or 3 if RGB)
+	CHANNELS = 3 # channels hyperparameter (should be 1 if Greyscale or 3 if RGB)
 	DIM = 128 # dimension hyperparameter, used in resizing cropped bbox images to shape (CHANNELS, DIM, DIM)
 	PREC = 64 # precision hyperparameter, used in defining the max pixel-sum values (can be 8, 16, 32, 64)
 
@@ -115,24 +115,23 @@ elif args.AnalysisType == 'AvgImgDistillation':
 	else:
 		videos = args.VideoIndex
 
-	current_idx = 0
-	while current_idx < len(videos):
-		commands = []
-		for video_idx in range(len(videos)):
-			videoObj = fm_obj.returnVideoObject(video_idx)
+	commands = []
+	for video_idx in videos:
+		videoObj = fm_obj.returnVideoObject(video_idx)
 
-			video_file = videoObj.mp4_file
-			tracks_file = videoObj.localFishTracksFile
-			avg_imgs_file = videoObj.localAvgImgsFile
+		video_file = videoObj.mp4_file
+		tracks_file = videoObj.localFishTracksFile
+		avg_imgs_file = videoObj.localAvgImgsFile
 
-			command = ['python3', '-m', 'unit_scripts.distill_data.py', video_file, tracks_file, avg_imgs_file, '--channels', CHANNELS, '--dim', DIM, '--precision', PREC]
-			commands.append(command)
+		command = ['python3', '-m', 'unit_scripts.distill_data.py', video_file, tracks_file, avg_imgs_file, '--channels', CHANNELS, '--dim', DIM, '--precision', PREC]
+		commands.append(command)
 
-		processes = [subprocess.Popen(command) for command in commands]
-		for p1 in processes:
-			p1.communicate()
-			if p1.returncode != 0:
-				raise Exception('Data Distillation (Image Averaging) Error')
+	processes = [subprocess.Popen(command) for command in commands]
+	for p1 in processes:
+		p1.communicate()
+
+		if p1.returncode != 0:
+			raise Exception('Data Distillation (Image Averaging) Error')
 			
 elif args.AnalysisType == 'Summary':
 	p1 = subprocess.Popen(
