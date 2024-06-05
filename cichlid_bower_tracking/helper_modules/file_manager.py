@@ -505,6 +505,7 @@ class FileManager():
         videoObj.localFishDetectionsFile = self.localTroubleshootingDir + videoObj.baseName + '_fishDetections.csv'
         videoObj.localFishTracksFile = self.localTroubleshootingDir + videoObj.baseName + '_fishTracks.csv'
         videoObj.localFishSexFile = self.localTroubleshootingDir + videoObj.baseName + '_fishSex.csv'
+        videoObj.localAvgImgsFile = self.localTroubleshootingDir + videoObj.baseName + '_avg_imgs.npz'
         
         videoObj.localAllClipsDir = self.localAllClipsDir + videoObj.baseName + '/'
         videoObj.localManualLabelClipsDir = self.localManualLabelClipsDir + videoObj.baseName + '/'

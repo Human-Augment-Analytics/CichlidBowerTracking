@@ -4,7 +4,7 @@ import argparse, sys, pdb, subprocess
 from helper_modules.file_manager import FileManager as FM
 
 parser = argparse.ArgumentParser()
-parser.add_argument('AnalysisType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish','AddFishSex','Summary','All'], help = 'What type of analysis to perform')
+parser.add_argument('AnalysisType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish','AddFishSex','AvgImgDistillation','Summary','All'], help = 'What type of analysis to perform')
 parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis state this project belongs to')
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
@@ -104,6 +104,35 @@ elif args.AnalysisType == 'AssociateClustersWithTracks':
 elif args.AnalysisType == 'AddFishSex':
 	p1 = subprocess.run(
 		['python3', '-m', 'cichlid_bower_tracking.unit_scripts.add_fish_sex', args.projectID, args.AnalysisID])
+	
+elif args.AnalysisType == 'AvgImgDistillation':	
+	CHANNELS = 3 # channels hyperparameter (should be 1 if Greyscale or 3 if RGB)
+	DIM = 128 # dimension hyperparameter, used in resizing cropped bbox images to shape (CHANNELS, DIM, DIM)
+	PREC = 64 # precision hyperparameter, used in defining the max pixel-sum values (can be 8, 16, 32, 64)
+
+	if args.VideoIndex is None:
+		videos = list(range(len(fm_obj.lp.movies)))
+	else:
+		videos = args.VideoIndex
+
+	commands = []
+	for video_idx in videos:
+		videoObj = fm_obj.returnVideoObject(video_idx)
+
+		video_file = videoObj.mp4_file
+		tracks_file = videoObj.localFishTracksFile
+		avg_imgs_file = videoObj.localAvgImgsFile
+
+		command = ['python3', '-m', 'unit_scripts.distill_data.py', video_file, tracks_file, avg_imgs_file, '--channels', CHANNELS, '--dim', DIM, '--precision', PREC]
+		commands.append(command)
+
+	processes = [subprocess.Popen(command) for command in commands]
+	for p1 in processes:
+		p1.communicate()
+
+		if p1.returncode != 0:
+			raise Exception('Data Distillation (Image Averaging) Error')
+			
 elif args.AnalysisType == 'Summary':
 	p1 = subprocess.Popen(
 			['python3', '-m', 'cichlid_bower_tracking.unit_scripts.summarize', args.projectID, '--SummaryFile', args.AnalysisID])
