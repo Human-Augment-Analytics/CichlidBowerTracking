@@ -19,7 +19,7 @@ IMG_H = 972
 class BBoxCollector:
     def __init__(self, video_file: str, tracks_file: str, dim=100, bboxes_dir=None, filename=None):
         '''
-        Create and initialize an instance of the DataDistillationPreparer class.
+        Create and initialize an instance of the BBoxCollector class.
 
         Inputs:
             video_file: a string value representing the filepath of the video which will be processed.
@@ -217,7 +217,7 @@ class BBoxCollector:
         video = read_video(self.video_file, output_format='TCHW')
 
         # iteratively save bboxes to dictionary
-        self.iterate(video=video)
+        self._iterate(video=video)
 
         # save bboxes dictionary as JSON
         # self.save_as_json()
