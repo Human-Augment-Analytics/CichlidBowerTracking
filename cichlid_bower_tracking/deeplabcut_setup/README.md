@@ -1,16 +1,22 @@
 ## README - Deeplabcut setup for Cichlid Bower Repository
 
+<!-- omit in toc -->
+## Table of Contents
+ - [DLC docker setup](#dlc-docker-setup-gui-only)
+ - [Google Colab Walkthrough](#google-colab-walkthrough)
+ - [Setting up DLC on SRG computer](#setting-up-dlc-on-srg-computer)
+
 ### Dockerfile & docker-compose.yml
 These files  are for local setup to setup a docker container 
 and run the deeplabcut GUI for dataset curation and generation of a training set.
-Follow the setup doc here: [deeplabcut gui docker container setup](#dlc-docker-setup)
+Follow the setup doc here: [deeplabcut gui docker container setup](#dlc-docker-setup-gui-only)
 
 ### Deeplabcut_1_Notebook.ipynb
 This file can be run in google colab to train a model. Simply follow the instructions
 in the [deeplabcut google colab walkthrough](#google-colab-walkthrough)
  
 
-### DLC docker setup
+### DLC docker setup (GUI Only)
 1. Install [VcXsrv](https://sourceforge.net/projects/vcxsrv/)
     - This is an application that acts as a server and will launch GUI apps.
 	- You can use other applications like Xming, MobaXterm, etc. 
@@ -55,4 +61,30 @@ The steps below walk through how to train a DLC model on google colab.
 5. To run on a GPU, select the desired runtime in the top right corner of the colab notebook
 	- ![select runtime](walkthrough_images/colab_runtime.png)
 6. run the Google colab notebook 
+7. Expect quite long runtimes (many hours)
 
+### Setting up DLC on SRG Computer
+1. get access by emailing support@cos.gatech.edu and state that you are working with the McGrath Lab and need to be added to the McGrath lab group.
+2. once you get access you can ssh into the computer via your `<gt-username>@srg.biology.gatech.edu`
+	- login with your gatech.edu password
+3. once logged in execute the following commands to install miniconda 
+	- NOTE: this can be skipped if your terminal looks like `(base) [<gt_username>@biocomputesrg]`, the `(base)` means that conda is already installed
+	- `wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh`
+	- `bash Miniconda3-latest-Linux-x86_64.sh`
+	- press enter a bunch of times then enter 'yes'
+	- `source ~/.bashrc`
+4. cd into this folder (CichlidBowerTracking/cichlid_bower_tracking/deeplabcut_setup)
+5. conda env create -f DEEPLABCUT.yaml
+6. conda install -c conda-forge cudnn
+7. find the path to your conda environment
+	- if you installed miniconda @ your root it should be something like "/data/home/<username>/miniconda3/envs/DEEPLABCUT"
+8. execute: `nano ~/.bashrc`
+9. add the following line to the ~/.bashrc file 
+	- export PATH=/data/home/<username>/miniconda3/envs/DEEPLABCUT/bin:$PATH
+10. Ctrl+O to save the ~/.bashrc file, Ctrl+X to exit
+11. execute: ``source ~/.bashrc`
+12. to check if you have deeplabcut properly installed
+	- open a python terminal by typing `python` and pressing enter
+	- in the python terminal `import deeplabcut`
+	- it will give some warnings, but it should say 'DLC loaded in light mode; you cannot use any GUI...' with no error messages after
+	- now you can train a model!
