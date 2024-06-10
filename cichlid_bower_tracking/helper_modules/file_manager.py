@@ -76,14 +76,23 @@ class FileManager():
             sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.ClusterClassification.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
 
-        projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it
-
+        projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it        
+        
         # Filter out projects if optional argment given
-        if filtered_projectIDs is not None:
-            for projectID in projectIDs:
-                if projectID not in filtered_projectIDs:
-                    projectIDs.remove(projectID)
-        return projectIDs
+
+        # if filtered_projectIDs is not None:
+        #     for projectID in projectIDs:
+        #         print(f'{projectID} not in {filtered_projectIDs}? {projectID not in filtered_projectIDs}')
+                
+        #         if projectID not in filtered_projectIDs:
+        #             print(f'\t{projectID} to be reomved!')
+        #             projectIDs.remove(projectID)
+
+        # print(f'\n\tnew projectIDs:\n{projectIDs}')
+
+        intersect_projectIDs = list(set(projectIDs) & set(filtered_projectIDs))
+
+        return intersect_projectIDs
 
     def updateSummaryFile(self, projectID, analysis_type):
         self.downloadData(self.localSummaryFile)
@@ -608,6 +617,9 @@ class FileManager():
         cloud_path = local_path.replace(self.localMasterDir, self.cloudMasterDir)
 
         cloud_objects = subprocess.run(['rclone', 'lsf', cloud_path], capture_output = True, encoding = 'utf-8').stdout.split()
+
+        # print(f'file: {relative_name}')
+        # print(f'cloud path: {cloud_path}')
 
         if relative_name + '/' in cloud_objects: #directory
             output = subprocess.run(['rclone', 'copy', cloud_path + relative_name, local_path + relative_name], capture_output = True, encoding = 'utf-8')
