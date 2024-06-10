@@ -1,9 +1,15 @@
 ## README - Deeplabcut setup for Cichlid Bower Repository
 
+<!-- omit in toc -->
+## Table of Contents
+ - [DLC docker setup](#dlc-docker-setup-gui-only)
+ - [Google Colab Walkthrough](#google-colab-walkthrough)
+ - [Setting up DLC on SRG computer](#setting-up-dlc-on-srg-computer)
+
 ### Dockerfile & docker-compose.yml
 These files  are for local setup to setup a docker container 
 and run the deeplabcut GUI for dataset curation and generation of a training set.
-Follow the setup doc here: [deeplabcut gui docker container setup](#dlc-docker-setup)
+Follow the setup doc here: [deeplabcut gui docker container setup](#dlc-docker-setup-gui-only)
 
 ### Deeplabcut_1_Notebook.ipynb
 This file can be run in google colab to train a model. Simply follow the instructions
