@@ -77,10 +77,11 @@ elif args.AnalysisType == 'TrackFish':
 					processes.append(ftp_objs[current_idx].runObjectDetectionAnalysis(gpu))
 					current_idx += 1
 
-
 		for p1 in processes:
 			p1.communicate()
 			if p1.returncode != 0:
+				# print(f'\nreturn code : {p1.returncode}\n')
+
 				raise Exception('YOLO Error')
 
 	

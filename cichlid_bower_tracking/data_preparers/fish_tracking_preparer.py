@@ -38,7 +38,18 @@ class FishTrackingPreparer():
 		command.extend(['--project', self.annotations_dir])
 		command.extend(['--save-txt', '--nosave', '--save-conf','--agnostic-nms'])
 
-		command = "source " + os.getenv('HOME') + "/anaconda3/etc/profile.d/conda.sh; conda activate yolov5; " + ' '.join(command)
+		home_subdirs = os.listdir(os.getenv('HOME'))
+		# print(f'\nhome_subdirs:\n{home_subdirs}\n')
+
+		# dynamically obtain anaconda distro directory in HOME
+		if 'anaconda3' in home_subdirs:
+			conda_dir = 'anaconda3'
+		elif 'miniconda3' in home_subdirs:
+			conda_dir = 'miniconda3'
+		else:
+			raise Exception(f'FishTrackingPreparer Error: Missing anaconda distribution from {os.getenv("HOME")}')
+
+		command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate yolov5; " + ' '.join(command)
 
 		os.chdir(os.getenv('HOME') + '/yolov5')
 		print('bash -c \"' + command + '\"')

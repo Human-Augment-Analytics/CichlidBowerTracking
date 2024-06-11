@@ -355,9 +355,9 @@ class FileManager():
             self.createDirectory(self.localTempDir)
 
             self.downloadData(self.localLogfile)
-            self.downloadData(self.localOldVideoCropFile)
-            self.downloadData(self.localAllLabeledClustersFile)
-            self.downloadData(self.localTroubleshootingDir)
+            # self.downloadData(self.localOldVideoCropFile)
+            # self.downloadData(self.localAllLabeledClustersFile)
+            # self.downloadData(self.localTroubleshootingDir)
             self.downloadData(self.localAnalysisDir)
 
             self.downloadData(self.localYolov5WeightsFile)
