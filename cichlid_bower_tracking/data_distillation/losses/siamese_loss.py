@@ -37,7 +37,7 @@ class SiameseLoss(nn.Module):
         elif distance_metric == 'cosine':
             self.distance_metric = nn.CosineSimilarity(eps=self.cosine_eps)
         else:
-            raise Exception(f'value passed to distance_metric hyperparameter must either be \'pairwise\' or \'cosine\' ({distance_metric}) passed').
+            raise Exception(f'value passed to distance_metric hyperparameter must either be \'pairwise\' or \'cosine\' ({distance_metric}) passed.')
 
         self.pair_loss = PairLoss(self.reconstruction_criterion)
         self.contrastive_loss = ContrastiveLoss(self.distance_metric, margin=self.margin)

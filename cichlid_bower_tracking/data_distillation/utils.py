@@ -3,7 +3,7 @@ import torch.optim as optim
 import torch.nn as nn
 import torch
 
-def train(dataloader: DataLoader, model: nn.Module, loss_fn: any, optimizer: optim.Optimizer, epoch: int) -> bool:
+def train(dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module, optimizer: optim.Optimizer, epoch: int) -> bool:
     n_batches = len(dataloader)
 
     # ====================================================================================================================
