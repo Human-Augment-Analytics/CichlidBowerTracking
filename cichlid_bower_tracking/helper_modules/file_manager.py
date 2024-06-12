@@ -352,14 +352,14 @@ class FileManager():
             self.createDirectory(self.localLogfileDir)
             self.createDirectory(self.localMasterDir)
             self.createDirectory(self.localAnalysisDir)
+            self.createDirectory(self.localTroubleshootingDir)
             self.createDirectory(self.localTempDir)
 
             self.downloadData(self.localLogfile)
             # self.downloadData(self.localOldVideoCropFile)
             # self.downloadData(self.localAllLabeledClustersFile)
-            # self.downloadData(self.localTroubleshootingDir)
-            self.downloadData(self.localAnalysisDir)
-
+            # # self.downloadData(self.localTroubleshootingDir)
+            # self.downloadData(self.localAnalysisDir)
             self.downloadData(self.localYolov5WeightsFile)
 
             try:
@@ -477,7 +477,7 @@ class FileManager():
             if not no_upload:
                 self.uploadData(self.localAllFishTracksFile)
                 self.uploadData(self.localAllFishDetectionsFile)
-                self.uploadData(self.localAllTracksSummaryFile)
+                # self.uploadData(self.localAllTracksSummaryFile)
                 for videoIndex in range(len(self.lp.movies)):
                     videoObj = self.returnVideoObject(videoIndex)
                     self.uploadData(videoObj.localFishTracksFile)
