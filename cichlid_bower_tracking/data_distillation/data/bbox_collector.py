@@ -70,61 +70,61 @@ class BBoxCollector:
         
         return bbox
 
-    def _rotate_bbox(self, bbox: torch.Tensor, x_dot: float, y_dot: float, mode_str='bilinear') -> torch.Tensor:
-        '''
-        Rotates the passed in bbox PyTorch Tensor based on the fish's x-dimensional and y-dimensional velocities, as determined by the
-        Kalman Filter during SORT. Inherently assumes that cichlids only swim in the direction which they are facing with their heads.
+    # def _rotate_bbox(self, bbox: torch.Tensor, x_dot: float, y_dot: float, mode_str='bilinear') -> torch.Tensor:
+    #     '''
+    #     Rotates the passed in bbox PyTorch Tensor based on the fish's x-dimensional and y-dimensional velocities, as determined by the
+    #     Kalman Filter during SORT. Inherently assumes that cichlids only swim in the direction which they are facing with their heads.
 
-        Inputs:
-            bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
-            x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file.
-            y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file.
-            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+    #     Inputs:
+    #         bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
+    #         x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file.
+    #         y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file.
+    #         mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
 
-        Returns: A PyTorch Tensor representing the rotated bbox.
-        '''
+    #     Returns: A PyTorch Tensor representing the rotated bbox.
+    #     '''
 
-        # use trig to determine the angle of rotation (convert to degrees)
-        theta = -math.atan2(y_dot, x_dot) * (180.0 / math.pi)
+    #     # use trig to determine the angle of rotation (convert to degrees)
+    #     theta = -math.atan2(y_dot, x_dot) * (180.0 / math.pi)
 
-        # define the interpolation mode
-        if mode_str == 'nearest':
-            mode = InterpolationMode.NEAREST
-        elif mode_str == 'nearest_exact':
-            mode = InterpolationMode.NEAREST_EXACT
-        else:
-            mode = InterpolationMode.BILINEAR
+    #     # define the interpolation mode
+    #     if mode_str == 'nearest':
+    #         mode = InterpolationMode.NEAREST
+    #     elif mode_str == 'nearest_exact':
+    #         mode = InterpolationMode.NEAREST_EXACT
+    #     else:
+    #         mode = InterpolationMode.BILINEAR
 
-        # perform rotation and return the resulting bbox
-        rot_bbox = rotate(bbox, theta, mode)
+    #     # perform rotation and return the resulting bbox
+    #     rot_bbox = rotate(bbox, theta, mode)
 
-        return rot_bbox
+    #     return rot_bbox
     
-    def _resize_bbox(self, bbox: torch.Tensor, mode_str='bilinear') -> torch.Tensor:
-        '''
-        Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed as an instance variable. 
+    # def _resize_bbox(self, bbox: torch.Tensor, mode_str='bilinear') -> torch.Tensor:
+    #     '''
+    #     Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed as an instance variable. 
 
-        Inputs:
-            bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
-            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+    #     Inputs:
+    #         bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
+    #         mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
 
-        Returns: a PyTorch Tensor representing the resized bbox image.            
-        '''
+    #     Returns: a PyTorch Tensor representing the resized bbox image.            
+    #     '''
 
-        # define the interpolation mode
-        if mode_str == 'nearest':
-            mode = InterpolationMode.NEAREST
-        elif mode_str == 'nearest_exact':
-            mode = InterpolationMode.NEAREST_EXACT
-        else:
-            mode = InterpolationMode.BILINEAR
+    #     # define the interpolation mode
+    #     if mode_str == 'nearest':
+    #         mode = InterpolationMode.NEAREST
+    #     elif mode_str == 'nearest_exact':
+    #         mode = InterpolationMode.NEAREST_EXACT
+    #     else:
+    #         mode = InterpolationMode.BILINEAR
 
-        # perform the resize and return the resulting bbox
-        resz_bbox = resize(bbox, (self.dim, self.dim), mode)
+    #     # perform the resize and return the resulting bbox
+    #     resz_bbox = resize(bbox, (self.dim, self.dim), mode)
 
-        return resz_bbox
+    #     return resz_bbox
 
-    def _save_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, x_dot: float, y_dot: float, track_id: int, mode_str='bilinear') -> bool:
+    def _save_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, track_id: int, x_dot=None, y_dot=None, mode_str='bilinear') -> bool:
         '''
         Saves the bounding box in the passed video frame with center (x_center, y_center), and dimensions (width, height) to the bboxes 
         dictionary.
@@ -135,24 +135,24 @@ class BBoxCollector:
             y_center: the y-coordinate of the bbox's upper-left corner, as calculated during YOLO.
             width: the width of the bbox to be saved, as calculated during YOLO.
             height: the width of the bbox to be saved, as calculated during YOLO.
-            x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file.
-            y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file.
+            x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file (deprecated).
+            y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file (deprecated).
             track_id: the track ID associated with the bbox to be saved, as stored in the tracks dataset.
-            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear' (deprecated).
 
         Returns: A Boolean indicating if the bbox was successfully stored in the bboxes dictionary.
         '''
 
         # pass frame through bbox extraction and transformation pipeline
         bbox = self._get_bbox(frame, x_center, y_center, width, height)
-        rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
-        resz_bbox = self._resize_bbox(rot_bbox, mode_str).detach().numpy()
+        # rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
+        # resz_bbox = self._resize_bbox(rot_bbox, mode_str).detach().numpy()
         
         # save transformed bbox to dictionary
         if track_id in list(self.bboxes.keys()):
-            self.bboxes[track_id].append(resz_bbox)
+            self.bboxes[track_id].append(bbox)
         else:
-            self.bboxes[track_id] = [resz_bbox]
+            self.bboxes[track_id] = [bbox]
 
         return True
     
@@ -204,6 +204,12 @@ class BBoxCollector:
     #     return True
 
     def _save_images(self, imgtype='png') -> None:
+        '''
+        Saves the collected bbox images to individual files in the directory located at self.bboxes_dir.
+
+        Inputs:
+            imgtype: the file format to be used in saving the bbox images; defaults to "png".
+        '''
         counts = dict()
 
         for track_id, bbox in self.bboxes.items():

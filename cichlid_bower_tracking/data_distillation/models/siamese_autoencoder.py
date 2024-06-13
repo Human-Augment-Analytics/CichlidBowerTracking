@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch
 
 class SiameseAutoencoder(nn.Module):
-    def __init_(self, features: int, batch_size=32, img_channels=3, img_dim=128, encoder_dropout=0.5):
+    def __init__(self, features: int, batch_size=32, img_channels=3, img_dim=128, encoder_dropout=0.5):
         '''
         Initializes an instance of the SiameseAutoencoder PyTorch module.
 
