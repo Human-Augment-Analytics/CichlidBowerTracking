@@ -2,8 +2,6 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
-import math
-
 class ContrastiveLoss(nn.Module):
     def __init__(self, distance_metric: nn.Module, margin=1.0):
         '''
@@ -35,6 +33,6 @@ class ContrastiveLoss(nn.Module):
         '''
 
         distance = self.distance_metric(z1, z2)
-        contrastive_loss = (1 - y) * 0.5 * math.pow(distance, 2) + 0.5 * y * math.pow(F.relu(self.margin - distance), 2)
+        contrastive_loss = (1 - y) * 0.5 * torch.pow(distance, 2) + 0.5 * y * torch.pow(F.relu(self.margin - distance), 2)
 
         return contrastive_loss

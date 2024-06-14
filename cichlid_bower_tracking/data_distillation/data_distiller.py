@@ -176,7 +176,7 @@ class DataDistiller:
         for epoch in range(self.nepochs):
             # perform training on current epoch
             print(f'\n---------------------------------------------------------------------------------------------')
-            print(f'TRAINING')
+            print(f'EPOCH {epoch}: TRAINING')
             print(f'---------------------------------------------------------------------------------------------\n')
 
             
@@ -185,7 +185,7 @@ class DataDistiller:
 
             # perform validation on current epoch
             print(f'\n---------------------------------------------------------------------------------------------')
-            print(f'VALIDATION')
+            print(f'EPOCH {epoch}: VALIDATION')
             print(f'---------------------------------------------------------------------------------------------\n')
 
             valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
@@ -198,7 +198,7 @@ class DataDistiller:
 
         # final print statement
         print(f'=============================================================================================')
-        print(f'BEST VALIDATION MODEL LOSS: {best_valid_avg}')
+        print(f'BEST VALIDATION MODEL LOSS: {best_valid_avg:.4f}')
         print(f'=============================================================================================\n')
 
         # return the best model
