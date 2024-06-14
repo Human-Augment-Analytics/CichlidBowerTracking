@@ -213,7 +213,7 @@ class BBoxCollector:
         counts = dict()
 
         for track_id, bbox in self.bboxes.items():
-            assert bbox.shape == (3, 128, 128)
+            assert bbox.shape == (3, self.dim, self.dim)
 
             if track_id not in list(counts.keys()):
                 counts[track_id] = 1
@@ -225,7 +225,7 @@ class BBoxCollector:
 
     def run(self) -> Dict:
         '''
-        Runs the data distillation preparer pipeline.
+        Runs the BBoxCollector pipeline.
 
         Inputs: none.
 
@@ -238,6 +238,9 @@ class BBoxCollector:
 
         # iteratively save bboxes to dictionary
         self._iterate(video=video)
+
+        # save each collected bbox to individual PNG files
+        self._save_images(imgtype='png')
 
         # save bboxes dictionary as JSON
         # self.save_as_json()
