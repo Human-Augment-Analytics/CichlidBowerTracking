@@ -29,7 +29,7 @@ class BBoxCollector:
             filename: the desired name for the JSON file; deprecated, defaults to None.
         '''
         
-        self.__version__ = '0.3.1'
+        self.__version__ = '0.3.2'
         self.video_file = video_file
         self.tracks_file = tracks_file
         self.dim = dim
@@ -138,7 +138,7 @@ class BBoxCollector:
             x_dot: the x-dimensional velocity as calculated by the Kalman Filter during SORT; listed as u_dot in the tracks data file (deprecated).
             y_dot: the y-dimensional velocoty as calculated by the Kalman Filter during SORT; listed as v_dot in the tracks data file (deprecated).
             track_id: the track ID associated with the bbox to be saved, as stored in the tracks dataset.
-            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear' (deprecated).
+            mode_str: the interpolation mode to be used during bbox transformation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
 
         Returns: A Boolean indicating if the bbox was successfully stored in the bboxes dictionary.
         '''
@@ -146,13 +146,13 @@ class BBoxCollector:
         # pass frame through bbox extraction and transformation pipeline
         bbox = self._get_bbox(frame, x_center, y_center, width, height)
         # rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
-        # resz_bbox = self._resize_bbox(rot_bbox, mode_str).detach().numpy()
+        resz_bbox = self._resize_bbox(bbox, mode_str).detach().numpy()
         
         # save transformed bbox to dictionary
         if track_id in list(self.bboxes.keys()):
-            self.bboxes[track_id].append(bbox)
+            self.bboxes[track_id].append(resz_bbox)
         else:
-            self.bboxes[track_id] = [bbox]
+            self.bboxes[track_id] = [resz_bbox]
 
         return True
     
