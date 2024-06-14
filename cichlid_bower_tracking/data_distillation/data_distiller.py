@@ -110,14 +110,19 @@ class DataDistiller:
             epoch_tracker.avg: the average loss stored in the epoch_tracker.
         '''
 
+        # get the total number of batches and create an EpochTracker
         nbatches = len(self.dataloader)
         epoch_tracker = EpochTracker()
 
+        # set model to evaluation mode, prevent model updates with torch.no_grad()
         self.model.eval()
         with torch.no_grad():
+            # manually keep track of batch number while looping through dataloader
             batch = 0
 
+            # loop over dataloader to perform validation
             for (x1, x2, y) in enumerate(self.dataloader):
+                # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
                     x1 = x1.cuda()
                     x2 = x2.cuda()
@@ -138,10 +143,15 @@ class DataDistiller:
                 # loss value tracking with EpochTracker
                 epoch_tracker.add(loss)
 
+                # print statements
                 if batch % 10 == 0:
                     print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
                           f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
-                    
+
+                # increment manual batch count    
+                batch += 1
+
+        # return the epoch statistics as tracked by the EpochTracker             
         return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
     
     def _main_loop(self) -> nn.Module:
@@ -153,19 +163,27 @@ class DataDistiller:
         Returns:
             best_model: a PyTorch model representing a copy of the best model observed during validation.
         '''
+
+        # move model to CUDA if requested (and able)
         if self.device == 'gpu' and torch.cuda.is_available():
             self.model = self.model.cuda()
 
+        # keep track of best average validation loss and best model weights
         best_valid_avg = float('inf')
         best_model = None
+
+        # loop through passed number of epochs
         for epoch in range(self.nepochs):
+            # perform training on current epoch
             print(f'\n---------------------------------------------------------------------------------------------')
             print(f'TRAINING')
             print(f'---------------------------------------------------------------------------------------------\n')
 
+            
             train_min, train_max, train_avg = self._train(epoch=epoch)
             self.train_logger.add(train_min, train_max, train_avg)
 
+            # perform validation on current epoch
             print(f'\n---------------------------------------------------------------------------------------------')
             print(f'VALIDATION')
             print(f'---------------------------------------------------------------------------------------------\n')
@@ -173,14 +191,17 @@ class DataDistiller:
             valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
             self.valid_logger.add(valid_min, valid_max, valid_avg)
 
+            # if current model is an improvement, save it and its average loss
             if valid_avg < best_valid_avg:
                 best_valid_avg = valid_avg
                 best_model = copy.deepcopy(self.model)
 
+        # final print statement
         print(f'=============================================================================================')
         print(f'BEST VALIDATION MODEL LOSS: {best_valid_avg}')
         print(f'=============================================================================================\n')
 
+        # return the best model
         return best_model
     
     def _save_model_weights(self, best_model: nn.Module) -> bool:
