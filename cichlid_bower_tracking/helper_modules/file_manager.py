@@ -231,6 +231,9 @@ class FileManager():
         self.localAllFishTracksFile = self.localAnalysisDir + 'AllTrackedFish.csv'
         self.localAllFishDetectionsFile = self.localAnalysisDir + 'AllDetectionsFish.csv'
         self.localAllTracksSummaryFile = self.localAnalysisDir + 'AllSummarizedTracks.csv'
+
+        # files created by bbox collector
+        self.localBBoxImagesDir = self.localTroubleshootingDir + 'BBoxImages/'
         
         #created by cluster_track_association_preparer_new
         
@@ -377,6 +380,25 @@ class FileManager():
                 self.downloadData(videoObj.localVideoFile)
             else:
                 print('Downloading video ' + self.localVideoDir)
+                self.downloadData(self.localVideoDir)
+
+        elif dtype == 'CollectBBoxes':
+            self.createDirectory(self.localLogfile)
+            self.createDirectory(self.localMasterDir)
+            self.createDirectory(self.localAnalysisDir)
+            self.createDirectory(self.localTroubleshootingDir)
+            self.createDirectory(self.localTempDir)
+
+            self.downloadData(self.localLogfile)
+            self.downloadData(self.localAnalysisDir)
+            self.downloadData(self.localTroubleshootingDir)
+            
+            if videoIndex is not None:
+                videoObj = self.returnVideoObject(videoIndex)
+                print(f'Downloading video {videoIndex}')
+                self.download(videoObj.localVideoFile)
+            else:
+                print (f'Downloading video directory {self.localVideoDir}')
                 self.downloadData(self.localVideoDir)
 
         elif dtype == 'AssociateClustersWithTracks':

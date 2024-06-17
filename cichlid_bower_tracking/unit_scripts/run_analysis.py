@@ -5,7 +5,7 @@ from helper_modules.file_manager import FileManager as FM
 import pandas as pd
 
 parser = argparse.ArgumentParser()
-parser.add_argument('AnalysisType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish','AddFishSex','Summary','All'], help = 'What type of analysis to perform')
+parser.add_argument('AnalysisType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish','AddFishSex','CollectBBoxes','Summary','All'], help = 'What type of analysis to perform')
 parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis state this project belongs to')
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
@@ -109,6 +109,24 @@ elif args.AnalysisType == 'TrackFish':
 			
 	c_dt_t.to_csv(fm_obj.localAllFishTracksFile)
 	c_dt_d.to_csv(fm_obj.localAllFishDetectionsFile)
+
+elif args.AnalysisType == 'CollectBBoxes':
+	from data_distillation.data.bbox_collector import BBoxCollector
+
+	if args.VideoIndex is None:
+		videos = list(range(len(fm_obj.lp.movies)))
+	else:
+		videos = args.VideoIndex
+
+	bboxc_objs = []
+	for videoIndex in videos:
+		videoObj = fm_obj.returnVideoObject(videoIndex)
+
+		bboxc = BBoxCollector(videoObj.localVideoFile, videoObj.localFishDetectionsFile, videoIndex, fm_obj.localBBoxImagesDir)
+		bboxc_objs.append(bboxc)
+	
+	for bboxc in bboxc_objs:
+		bboxc.run()
 
 elif args.AnalysisType == 'AssociateClustersWithTracks':
 	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
