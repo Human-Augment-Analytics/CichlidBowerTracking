@@ -2,6 +2,8 @@ import os, subprocess, pdb, platform, shutil
 from helper_modules.log_parser import LogParser as LP
 import pandas as pd 
 
+from misc.pace_vars import USING_PACE
+
 class FileManager():
     def __init__(self, analysisID = 'MC_multi', projectID = None, rcloneRemote = 'CichlidPiData:', masterDir = 'BioSci-McGrath/Apps/CichlidPiData/', check = False):
         # Identify directory for temporary local files
@@ -9,6 +11,8 @@ class FileManager():
             self._identifyPiDirectory()
         elif platform.node() == 'ebb-utaka.biosci.gatech.edu':
             self.localMasterDir = '/mnt/Storage/' + os.getenv('USER') + '/Temp/CichlidAnalyzer/'
+        elif USING_PACE:
+            self.localMasterDir = os.getenv('HOME').rstrip('/') + '/' + 'scratch' + '/' + 'Temp/CichlidAnalyzer/' 
         else:
             self.localMasterDir = os.getenv('HOME').rstrip('/') + '/' + 'Temp/CichlidAnalyzer/'
 
