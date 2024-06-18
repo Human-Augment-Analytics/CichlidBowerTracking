@@ -1,4 +1,4 @@
-import os, subprocess, pdb, platform, shutil
+import os, subprocess, pdb, platform, shutil, math
 from helper_modules.log_parser import LogParser as LP
 import pandas as pd 
 
@@ -120,6 +120,7 @@ class FileManager():
         necessaryFiles['ClusterClassification'] = [self.localAllLabeledClustersFile]
         necessaryFiles['TrackFish'] = [self.localAllFishDetectionsFile, self.localAllFishTracksFile]
 
+
         necessaryFiles['Summary'] = [self.localSummaryDir]
 
         print('Checking project ' + self.projectID + ': ', end = '')
@@ -231,9 +232,6 @@ class FileManager():
         self.localAllFishTracksFile = self.localAnalysisDir + 'AllTrackedFish.csv'
         self.localAllFishDetectionsFile = self.localAnalysisDir + 'AllDetectionsFish.csv'
         self.localAllTracksSummaryFile = self.localAnalysisDir + 'AllSummarizedTracks.csv'
-
-        # files created by bbox collector
-        self.localBBoxImagesDir = self.localTroubleshootingDir + 'BBoxImages/'
         
         #created by cluster_track_association_preparer_new
         
@@ -387,6 +385,7 @@ class FileManager():
             self.createDirectory(self.localMasterDir)
             self.createDirectory(self.localAnalysisDir)
             self.createDirectory(self.localTroubleshootingDir)
+            self.createDirectory(self.localBBoxImagesDir)
             self.createDirectory(self.localTempDir)
 
             self.downloadData(self.localLogfile)
@@ -540,7 +539,9 @@ class FileManager():
         videoObj.localFishDetectionsFile = self.localTroubleshootingDir + videoObj.baseName + '_fishDetections.csv'
         videoObj.localFishTracksFile = self.localTroubleshootingDir + videoObj.baseName + '_fishTracks.csv'
         videoObj.localFishSexFile = self.localTroubleshootingDir + videoObj.baseName + '_fishSex.csv'
-        videoObj.localAvgImgsFile = self.localTroubleshootingDir + videoObj.baseName + '_avg_imgs.npz'
+
+        # define local bbox image storage location for each video
+        videoObj.localVideoBBoxImagesDir = self.localTroubleshootingDir + videoObj.baseName + '_BBoxImages/'
         
         videoObj.localAllClipsDir = self.localAllClipsDir + videoObj.baseName + '/'
         videoObj.localManualLabelClipsDir = self.localManualLabelClipsDir + videoObj.baseName + '/'

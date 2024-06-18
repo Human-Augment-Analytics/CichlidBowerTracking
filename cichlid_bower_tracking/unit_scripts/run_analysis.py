@@ -1,6 +1,6 @@
 # Things to add
 
-import argparse, sys, pdb, subprocess
+import argparse, sys, pdb, subprocess, os
 from helper_modules.file_manager import FileManager as FM
 import pandas as pd
 
@@ -10,6 +10,7 @@ parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis sta
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
 parser.add_argument('--VideoIndex', nargs = '+', help = 'Restrict which videos to run the analysis on')
+parser.add_argument('--Dim', type=int, help='Specific to the "CollectBBoxes" option, this indicates what dimension should be used in resizing bbox images collected')
 
 args = parser.parse_args()
 
@@ -110,23 +111,51 @@ elif args.AnalysisType == 'TrackFish':
 	c_dt_t.to_csv(fm_obj.localAllFishTracksFile)
 	c_dt_d.to_csv(fm_obj.localAllFishDetectionsFile)
 
-elif args.AnalysisType == 'CollectBBoxes':
-	from data_distillation.data.bbox_collector import BBoxCollector
-
+elif args.AnalysisType == 'CollectBBoxes':	
 	if args.VideoIndex is None:
 		videos = list(range(len(fm_obj.lp.movies)))
 	else:
 		videos = args.VideoIndex
 
-	bboxc_objs = []
-	for videoIndex in videos:
-		videoObj = fm_obj.returnVideoObject(videoIndex)
+	# dynamically obtain anaconda distro directory in HOME
+	home_subdirs = os.listdir(os.getenv('HOME'))
 
-		bboxc = BBoxCollector(videoObj.localVideoFile, videoObj.localFishDetectionsFile, videoIndex, fm_obj.localBBoxImagesDir)
-		bboxc_objs.append(bboxc)
+	if 'anaconda3' in home_subdirs:
+		conda_dir = 'anaconda3'
+	elif 'miniconda3' in home_subdirs:
+		conda_dir = 'miniconda3'
+	else:
+		raise Exception(f'Conda Error: Missing anaconda distribution from {os.getenv("HOME")}')
+
+	# switch to CichlidDistillation conda env
+	command = "bach -c source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation"
+	p0 = subprocess.Popen(command)
+
+	if p0.returncode != 0:
+		raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
+
+	# create and store collection commands for each video
+	commands = []
+	for videoIndex in videos:
+		command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, videoIndex, '--dim', args.Dim]
+		commands.append(' '.join(command))
 	
-	for bboxc in bboxc_objs:
-		bboxc.run()
+	# execute stored collection commands for each video
+	processes = [subprocess.Popen(command) for command in commands]
+
+	command_idx = 0
+	for p1 in processes:
+		p1.communicate()
+
+		if p1.returncode != 0:
+			raise Exception(f'BBox Collection Error: "{" ".join(commands[command_idx])}" subprocess returned non-zero code')
+		
+	# return to CichlidBowerTracking conda env
+	command = "bach -c source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidBowerTracking"
+	p2 = subprocess.Popen(command)
+
+	if p2.returncode != 0:
+		raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
 
 elif args.AnalysisType == 'AssociateClustersWithTracks':
 	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
