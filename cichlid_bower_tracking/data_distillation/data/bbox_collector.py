@@ -29,7 +29,7 @@ class BBoxCollector:
             filename: the desired name for the JSON file; deprecated, defaults to None.
         '''
         
-        self.__version__ = '0.4.0'
+        self.__version__ = '0.4.1'
         self.video_file = video_file
         self.detections_file = detections_file
         self.bboxes_dir = bboxes_dir
@@ -124,7 +124,7 @@ class BBoxCollector:
 
     #     return resz_bbox
 
-    def _save_bbox(self, frame_idx: int, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, mode_str='bilinear') -> bool:
+    def _save_bbox(self, frame_idx: int, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, mode_str='bilinear') -> None:
         '''
         Saves the bounding box in the passed video frame with center (x_center, y_center), and dimensions (width, height) to the bboxes 
         dictionary.
@@ -137,8 +137,6 @@ class BBoxCollector:
             width: the width of the bbox to be saved, as calculated during YOLO.
             height: the width of the bbox to be saved, as calculated during YOLO.
             mode_str: the interpolation mode to be used during bbox transformation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
-
-        Returns: A Boolean indicating if the bbox was successfully stored in the bboxes dictionary.
         '''
 
         # pass frame through bbox extraction and transformation pipeline
@@ -151,18 +149,14 @@ class BBoxCollector:
             self.bboxes[frame_idx].append(resz_bbox)
         else:
             self.bboxes[frame_idx] = [resz_bbox]
-
-        return True
-    
-    def _iterate(self, video: torch.Tensor) -> bool:
+            
+    def _iterate(self, video: torch.Tensor) -> None:
         '''
         Iterates through the passed video Tensor by track ID, saving each bounding box to the bboxes dictionary. Assumes
         that tracking data collected by SortFish class is in sequential order for each track ID.
 
         Inputs:
             video: PyTorch Tensor of shape (T, C, H, W) containing a video which has already been run through the YOLO + SORT pipeline.
-        
-        Returns: a Boolean indicating if the complete iteration through the video Tensor was successful.
         '''
 
         # read tracks data from tracks file built by SortFish class
@@ -180,8 +174,6 @@ class BBoxCollector:
             x_center, y_center = x2 + (width // 2), y2 + (height // 2)
 
             self._save_bbox(frame_idx, video[frame_idx, :, :, :], x_center, y_center, width, height)
-
-        return True
 
     # def save_as_json(self) -> bool:
     #     '''
