@@ -40,7 +40,7 @@ class CichlidPairs(Dataset):
             x2: the second bbox image in the pair at the passed index.
             label: the similarity label associated with x1 and x2.
         '''
-        
+
         x1_path, x2_path, label = self.df.iloc[index]
         x1, x2 = read_image(x1_path).float(), read_image(x2_path).float()
 
