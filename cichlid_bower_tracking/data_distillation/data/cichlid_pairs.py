@@ -14,6 +14,8 @@ class CichlidPairs(Dataset):
             transform: a set of PyTorch transforms to be performed on every bbox image.
         '''
 
+        self.__version__ = '0.1.0'
+
         self.df = df
         self.transform = transform
 

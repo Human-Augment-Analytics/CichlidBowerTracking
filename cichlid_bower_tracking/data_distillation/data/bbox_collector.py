@@ -29,7 +29,7 @@ class BBoxCollector:
             filename: the desired name for the JSON file; deprecated, defaults to None.
         '''
         
-        self.__version__ = '0.3.3'
+        self.__version__ = '0.4.0'
         self.video_file = video_file
         self.detections_file = detections_file
         self.bboxes_dir = bboxes_dir
