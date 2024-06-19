@@ -511,6 +511,15 @@ class FileManager():
             if delete:
                 shutil.rmtree(self.localProjectDir)
                 #os.remove(self.localYolov5WeightsFile)
+        elif dtype == 'CollectBBoxes':
+            if not no_upload:
+                for videoIndex in range(len(self.lp.movies)):
+                    videoObj = self.returnVideoObject(videoIndex)
+
+                    self.uploadData(videoObj.localVideoBBoxImagesDir)
+            if delete:
+                shutil.rmtree(self.localProjectDir)
+                
         elif dtype == 'AddFishSex':
             if not no_upload:
                 self.uploadData(self.localAllFishSexFile)
