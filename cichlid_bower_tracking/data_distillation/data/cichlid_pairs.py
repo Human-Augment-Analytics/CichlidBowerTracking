@@ -50,4 +50,4 @@ class CichlidPairs(Dataset):
             x1 = self.transform(x1)
             x2 = self.transform(x2)
 
-        return x1, x2, label
+        return (x1, x2), label

@@ -1,4 +1,4 @@
-# from torchvision.transforms.functional import rotate, resize, InterpolationMode
+from torchvision.transforms.functional import resize, InterpolationMode
 from torchvision.io import read_video 
 from torchvision.utils import save_image
 from typing import Dict
