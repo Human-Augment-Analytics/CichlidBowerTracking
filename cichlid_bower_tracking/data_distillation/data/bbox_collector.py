@@ -100,29 +100,29 @@ class BBoxCollector:
 
     #     return rot_bbox
     
-    # def _resize_bbox(self, bbox: torch.Tensor, mode_str='bilinear') -> torch.Tensor:
-    #     '''
-    #     Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed as an instance variable. 
+    def _resize_bbox(self, bbox: torch.Tensor, mode_str='bilinear') -> torch.Tensor:
+        '''
+        Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed as an instance variable. 
 
-    #     Inputs:
-    #         bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
-    #         mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
+        Inputs:
+            bbox: a PyTorch Tensor representing a bounding box, as carved out of a video frame by the self._get_box function; has shape (C, H, W).
+            mode_str: the interpolation mode to be used during rotation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
 
-    #     Returns: a PyTorch Tensor representing the resized bbox image.            
-    #     '''
+        Returns: a PyTorch Tensor representing the resized bbox image.            
+        '''
 
-    #     # define the interpolation mode
-    #     if mode_str == 'nearest':
-    #         mode = InterpolationMode.NEAREST
-    #     elif mode_str == 'nearest_exact':
-    #         mode = InterpolationMode.NEAREST_EXACT
-    #     else:
-    #         mode = InterpolationMode.BILINEAR
+        # define the interpolation mode
+        if mode_str == 'nearest':
+            mode = InterpolationMode.NEAREST
+        elif mode_str == 'nearest_exact':
+            mode = InterpolationMode.NEAREST_EXACT
+        else:
+            mode = InterpolationMode.BILINEAR
 
-    #     # perform the resize and return the resulting bbox
-    #     resz_bbox = resize(bbox, (self.dim, self.dim), mode)
+        # perform the resize and return the resulting bbox
+        resz_bbox = resize(bbox, (self.dim, self.dim), mode)
 
-    #     return resz_bbox
+        return resz_bbox
 
     def _save_bbox(self, frame_idx: int, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int, mode_str='bilinear') -> None:
         '''
