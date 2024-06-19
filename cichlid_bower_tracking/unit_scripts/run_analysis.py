@@ -10,6 +10,7 @@ parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis sta
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
 parser.add_argument('--VideoIndex', nargs = '+', help = 'Restrict which videos to run the analysis on')
+parser.add_argument('--FPC', type=int, help='Specific to the "CollectBBoxes" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
 parser.add_argument('--Dim', type=int, help='Specific to the "CollectBBoxes" option, this indicates what dimension should be used in resizing bbox images collected')
 
 args = parser.parse_args()
@@ -135,6 +136,8 @@ elif args.AnalysisType == 'CollectBBoxes':
 		print(f'videoIndex: {videoIndex}')
 
 		py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, f'{videoIndex}']
+		if args.FPC is not None:
+			py_command += ['--fpc', f'{args.FPC}']
 		if args.Dim is not None:
 			py_command += ['--dim', f'{args.Dim}']
 

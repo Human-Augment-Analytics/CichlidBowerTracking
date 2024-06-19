@@ -13,6 +13,7 @@ parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster
 parser.add_argument('AnalysisID', type = str, help = 'ID of analysis state name')
 parser.add_argument('--ProjectIDs', type=str, nargs='+', help='Optional name of projectIDs to restrict the analysis to')
 parser.add_argument('--Workers', type=int, help='Number of workers')
+parser.add_argument('--FPC', type=int, help='Indicates the number of frames per clip; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Dim', type=int, help='Indicates the dimension that should be used in resizing collected bbox images; specific to the "CollectBBoxes" AnalysisType')
 args = parser.parse_args()
 
@@ -49,6 +50,8 @@ while len(projectIDs) != 0:
 
     # dynamically construct command
     command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID]
+    if args.FPC is not None:
+        command += ['--FPC', args.FPC]
     if args.Dim is not None:
         command += ['--Dim', args.Dim]
 
