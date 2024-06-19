@@ -1,10 +1,13 @@
 from torchvision.transforms.functional import resize, InterpolationMode
-from torchvision.io import read_video 
+# from torchvision.io import read_video 
 from torchvision.utils import save_image
 from typing import Dict
+import torch
+
 import numpy as np
 import pandas as pd
-import torch
+# import cv2
+
 import math, os, json
 
 np.random.seed(0)
@@ -222,12 +225,30 @@ class BBoxCollector:
         # Returns: a Boolean indicating that the data distillation preparer was successfully run.
 
         # handle conversion from self.videoObj to Tensor using the PyTorch read_video function
-        video = read_video(self.video_file, output_format='TCHW')
-
+        print(f'Running BBox collection on video {self.video_file.split("/")[-1]}...')
+        # video = read_video(self.video_file, output_format='TCHW')
+        # capture = cv2.VideoCapture(self.video_file)
+        # fps = capture.get(cv2.CAP_PROP_FPS)
+        
+        # stack = []
+        # while capture.isOpened():
+        #     frame_exists, frame = capture.read()
+            
+        #     if frame_exists:
+        #         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        #         stack.append(frame)
+        #     else:
+        #         capture.release()
+        #         break
+        # video = torch.tensor(np.array(stack), dtype=torch.uint64)
+        
+        print(f'\t\tVideo {self.video_file.split("/")[-1]} shape: {video.shape}')
         # iteratively save bboxes to dictionary
+        print(f'\t...Iterating through video {self.video_file.split("/")[-1]}')
         self._iterate(video=video)
 
         # save each collected bbox to individual PNG files
+        print(f'\t...Saving BBoxes collected from video {self.video_file.split("/")[-1]}')
         self._save_images(imgtype='png')
 
         # save bboxes dictionary as JSON
@@ -235,4 +256,5 @@ class BBoxCollector:
 
         # return True
 
+        print(f'\tDone collecting from video {self.video_file.split("/")[-1]}')
         return self.bboxes

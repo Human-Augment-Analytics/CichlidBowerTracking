@@ -17,7 +17,7 @@ projectIDs = list(dt.projectID)
 
 print(f'projectIDs list:\n{projectIDs}\n')
 
-columns = ['projectID', 'Notes', 'tankID', 'RunAnalysis', 'StartingFiles', 'Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'Summary']
+columns = ['projectID', 'Notes', 'tankID', 'RunAnalysis', 'StartingFiles', 'Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'CollectBBoxes', 'Summary']
 
 for c in columns:
 	if c not in dt.columns:

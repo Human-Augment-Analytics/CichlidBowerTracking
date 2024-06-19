@@ -47,8 +47,14 @@ subprocess.run(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType
 while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
+    # dynamically construct command
+    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID]
+    if args.Dim is not None:
+        command += ['--Dim', args.Dim]
+
+    # run constructed command
     print('Running: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
-    p1 = subprocess.Popen(['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID, '--Dim', args.Dim])
+    p1 = subprocess.Popen(command)
 
     # Download data for the next project in the background
     if len(projectIDs) != 0:

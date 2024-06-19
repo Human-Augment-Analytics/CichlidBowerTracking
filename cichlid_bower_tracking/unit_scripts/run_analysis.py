@@ -127,35 +127,39 @@ elif args.AnalysisType == 'CollectBBoxes':
 	else:
 		raise Exception(f'Conda Error: Missing anaconda distribution from {os.getenv("HOME")}')
 
-	# switch to CichlidDistillation conda env
-	command = "bach -c source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation"
-	p0 = subprocess.Popen(command)
+	# construct and store commands
+	base_command = 'source ' + os.getenv('HOME') + f'/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation; '
 
-	if p0.returncode != 0:
-		raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
-
-	# create and store collection commands for each video
 	commands = []
 	for videoIndex in videos:
-		command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, videoIndex, '--dim', args.Dim]
-		commands.append(' '.join(command))
+		print(f'videoIndex: {videoIndex}')
+
+		py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, f'{videoIndex}']
+		if args.Dim is not None:
+			py_command += ['--dim', f'{args.Dim}']
+
+		py_command = ' '.join(py_command)
+		full_command = base_command + py_command
+
+		commands.append('bash -c \"' + full_command + '\"')
 	
 	# execute stored collection commands for each video
-	processes = [subprocess.Popen(command) for command in commands]
+	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
 	command_idx = 0
 	for p1 in processes:
 		p1.communicate()
 
 		if p1.returncode != 0:
-			raise Exception(f'BBox Collection Error: "{" ".join(commands[command_idx])}" subprocess returned non-zero code')
+			raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
 		
 	# return to CichlidBowerTracking conda env
-	command = "bach -c source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidBowerTracking"
-	p2 = subprocess.Popen(command)
+	# command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidBowerTracking"
+	# p2 = subprocess.Popen(command)
 
-	if p2.returncode != 0:
-		raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
+	# p2.communicate()
+	# if p2.returncode != 0:
+	# 	raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
 
 elif args.AnalysisType == 'AssociateClustersWithTracks':
 	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP

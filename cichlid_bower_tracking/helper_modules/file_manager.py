@@ -55,7 +55,7 @@ class FileManager():
                 
     def identifyProjectsToRun(self, analysis_type, filtered_projectIDs):
         self.downloadData(self.localSummaryFile)
-        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'Summary': str})
+        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'CollectBBoxes': str, 'Summary': str})
 
         # Identify projects to run on:
         sub_dt = dt[dt.RunAnalysis.str.upper() == 'TRUE'] # Only analyze projects that are indicated
@@ -79,6 +79,10 @@ class FileManager():
             sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.ClusterClassification.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
+        elif analysis_type == 'CollectBBoxes':
+            sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
 
         projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it        
         
@@ -109,7 +113,7 @@ class FileManager():
     def getProjectStates(self):
 
         # Dictionary to hold row of data
-        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'Summary': False}
+        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'CollectBBoxes': False,'Summary': False}
 
         # List the files needed for each analysis
         necessaryFiles = {}
@@ -119,7 +123,7 @@ class FileManager():
         necessaryFiles['Cluster'] = [self.localAllClipsDir, self.localManualLabelClipsDir, self.localManualLabelFramesDir]
         necessaryFiles['ClusterClassification'] = [self.localAllLabeledClustersFile]
         necessaryFiles['TrackFish'] = [self.localAllFishDetectionsFile, self.localAllFishTracksFile]
-
+        necessaryFiles['CollectBBoxes'] = [self.localAllFishDetectionsFile]
 
         necessaryFiles['Summary'] = [self.localSummaryDir]
 
@@ -385,7 +389,7 @@ class FileManager():
             self.createDirectory(self.localMasterDir)
             self.createDirectory(self.localAnalysisDir)
             self.createDirectory(self.localTroubleshootingDir)
-            self.createDirectory(self.localBBoxImagesDir)
+            # self.createDirectory(self.localBBoxImagesDir)
             self.createDirectory(self.localTempDir)
 
             self.downloadData(self.localLogfile)
@@ -519,7 +523,7 @@ class FileManager():
                     self.uploadData(videoObj.localVideoBBoxImagesDir)
             if delete:
                 shutil.rmtree(self.localProjectDir)
-                
+
         elif dtype == 'AddFishSex':
             if not no_upload:
                 self.uploadData(self.localAllFishSexFile)
@@ -549,7 +553,8 @@ class FileManager():
         videoObj.localFishTracksFile = self.localTroubleshootingDir + videoObj.baseName + '_fishTracks.csv'
         videoObj.localFishSexFile = self.localTroubleshootingDir + videoObj.baseName + '_fishSex.csv'
 
-        # define local bbox image storage location for each video
+        # define local video clip and bbox image storage locations for each video
+        videoObj.localVideoClipsDir = self.localTroubleshootingDir + videoObj.baseName + '_Clips/'
         videoObj.localVideoBBoxImagesDir = self.localTroubleshootingDir + videoObj.baseName + '_BBoxImages/'
         
         videoObj.localAllClipsDir = self.localAllClipsDir + videoObj.baseName + '/'
