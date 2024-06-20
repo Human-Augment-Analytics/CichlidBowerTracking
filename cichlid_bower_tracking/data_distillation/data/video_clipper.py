@@ -38,7 +38,7 @@ class VideoClipper:
         
         clip = torch.tensor(np.array(stack), dtype=torch.uint64)
         
-        filename = f'{"0" * (4 - math.floor(1 + math.log10(self.video_index)))}vid_{"0" * (9 - math.floor(1 + math.log10(self.clip_count)))}clip'
+        filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count)))}clip'
         filename = os.path.join(self.clips_dir, filename)
 
         video_codec = 'h264'

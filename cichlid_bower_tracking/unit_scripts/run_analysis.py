@@ -127,26 +127,21 @@ elif args.AnalysisType == 'CollectBBoxes':
 		conda_dir = 'miniconda3'
 	else:
 		raise Exception(f'Conda Error: Missing anaconda distribution from {os.getenv("HOME")}')
-
-	# construct and store commands
+	
+	# construct and store clipping commands
 	base_command = 'source ' + os.getenv('HOME') + f'/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation; '
 
 	commands = []
 	for videoIndex in videos:
-		print(f'videoIndex: {videoIndex}')
-
-		py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, f'{videoIndex}']
+		py_command = ['python3', '-m', 'unit_scripts.clip_video', args.AnalysisID, args.ProjectID, f'{videoIndex}']
 		if args.FPC is not None:
 			py_command += ['--fpc', f'{args.FPC}']
-		if args.Dim is not None:
-			py_command += ['--dim', f'{args.Dim}']
 
 		py_command = ' '.join(py_command)
 		full_command = base_command + py_command
 
 		commands.append('bash -c \"' + full_command + '\"')
-	
-	# execute stored collection commands for each video
+
 	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
 	command_idx = 0
@@ -154,15 +149,38 @@ elif args.AnalysisType == 'CollectBBoxes':
 		p1.communicate()
 
 		if p1.returncode != 0:
-			raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
+			raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
 		
-	# return to CichlidBowerTracking conda env
-	# command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidBowerTracking"
-	# p2 = subprocess.Popen(command)
 
-	# p2.communicate()
-	# if p2.returncode != 0:
-	# 	raise Exception(f'Conda Error: "{command}" subprocess returned non-zero code')
+	# construct and store collection commands
+	commands = []
+
+	clip_index, starting_frame_index = 0, 0
+	for videoIndex in videos:
+		print(f'videoIndex: {videoIndex}')
+
+		video_obj = fm_obj.returnVideoObject(videoIndex)
+		clip_files = os.listdir(video_obj.localVideoClipsDir)
+
+		for clip_file in clip_files:
+			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{clip_index}', f'{starting_frame_index}']
+			if args.Dim is not None:
+				py_command += ['--dim', f'{args.Dim}']
+
+			py_command = ' '.join(py_command)
+			full_command = base_command + py_command
+
+			commands.append('bash -c \"' + full_command + '\"')
+	
+	# execute stored collection commands for each video
+	processes = [subprocess.Popen(command, shell=True) for command in commands]
+
+	command_idx = 0
+	for p2 in processes:
+		p2.communicate()
+
+		if p2.returncode != 0:
+			raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
 
 elif args.AnalysisType == 'AssociateClustersWithTracks':
 	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
