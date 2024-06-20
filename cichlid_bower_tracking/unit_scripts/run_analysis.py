@@ -137,8 +137,8 @@ elif args.AnalysisType == 'CollectBBoxes':
 		py_command = ['python3', '-m', 'unit_scripts.clip_video', args.AnalysisID, args.ProjectID, f'{videoIndex}']
 		if args.FPC is not None:
 			py_command += ['--fpc', f'{args.FPC}']
-		# if args.Debug is not None:
-		# 	py_command += ['--debug', f'{args.Debug}']
+		if args.Debug is not None:
+			py_command += ['--debug', f'{args.Debug}']
 
 		py_command = ' '.join(py_command)
 		full_command = base_command + py_command
@@ -148,12 +148,12 @@ elif args.AnalysisType == 'CollectBBoxes':
 	print(f'\nClipping videos\n')
 	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
-	command_idx = 0
 	for p1 in processes:
 		p1.communicate()
 
 		if p1.returncode != 0:
-			raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
+			# raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
+			raise Exception()
 
 	# construct and store collection commands
 	commands = []
@@ -184,7 +184,13 @@ elif args.AnalysisType == 'CollectBBoxes':
 		clip_index += 1
 	
 	# execute stored collection commands for each video
-	processes = [subprocess.Popen(command, shell=True) for command in commands]
+	# processes = []
+	# while len(commands) > 0:
+	# 	command = commands.pop(0)
+
+	# 	if len(processes) < 
+
+
 
 	command_idx = 0
 	for p2 in processes:

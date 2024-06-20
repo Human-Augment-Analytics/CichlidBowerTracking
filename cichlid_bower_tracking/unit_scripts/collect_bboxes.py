@@ -1,6 +1,5 @@
 import argparse
 
-from data_distillation.data.video_clipper import VideoClipper
 from data_distillation.data.bbox_collector import BBoxCollector
 from helper_modules.file_manager import FileManager
 
@@ -32,3 +31,6 @@ debug = False if args.debug is None else args.debug
 
 print(f'Creating BBoxCollector for video {video_obj.baseName}')
 bboxc_obj = BBoxCollector(clip_file=args.ClipFile, detections_file=video_obj.localFishDetectionsFile, bboxes_dir=video_obj.localVideoBBoxImagesDir, clip_index=args.ClipIndex, starting_frame_index=args.StartingFrameIndex, dim=dim, debug=debug)
+
+print(f'Running collection process...')
+bboxc_obj.run()

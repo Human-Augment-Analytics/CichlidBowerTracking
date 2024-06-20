@@ -1,7 +1,7 @@
 from typing import List
 import math, os
 
-from torchvision.io import VideoReader, write_video
+from torchvision.io import read_video, write_video#, VideoReader
 import torch
 import numpy as np
 
@@ -28,9 +28,9 @@ class VideoClipper:
         self.debug = debug
 
         self.clip_count = 0
-        self.reader = VideoReader(self.video_file)
+        # self.reader = VideoReader(src=self.video_file)
 
-    def _save_clip(self, stack: List[np.ndarray]) -> None:
+    def _save_clip(self, clip: torch.Tensor) -> None: # stack: List[np.ndarray]) -> None:
         '''
         Saves the passed stack of frames as a clip to the local file system.
 
@@ -38,13 +38,15 @@ class VideoClipper:
             stack: a list containing NumPy ndarray frames from the passed video.
         '''
         
-        if self.debug:
-            print(f'\t...converting to Tensor')
+        # if self.debug:
+        #     print(f'\t...converting to Tensor')
         
-        clip = torch.tensor(np.array(stack), dtype=torch.uint8)
+        # clip = torch.tensor(np.array(stack), dtype=torch.uint8)
 
-        t, c, h, w = clip.shape
-        clip = clip.reshape((t, h, w, c))
+        # t, c, h, w = clip.shape
+        # clip = clip.reshape((t, h, w, c))
+
+        # print(f'\t...clip #{self.clip_count + 1} shape: {clip.shape}')
         
         filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count + 1)))}{self.clip_count + 1}'
         filename = os.path.join(self.clips_dir, filename)
@@ -63,25 +65,45 @@ class VideoClipper:
         Inputs: None.
         '''
         
-        stack = []
-        if self.debug:
-            print('\t...beginning frame iteration')
+        # stack = []
+        # if self.debug:
+        #     print('\t...beginning frame iteration')
 
-        for frame in self.reader:
-            if len(stack) >= self.fpc:
-                self._save_clip(stack)
-                self.clip_count += 1
+        # for frame in self.reader:
+        #     if len(stack) >= self.fpc:
+        #         self._save_clip(stack)
+        #         self.clip_count += 1
 
-                if self.debug:
-                    print(f'\t...clip #{self.clip_count} done')
+        #         if self.debug:
+        #             print(f'\t...clip #{self.clip_count} done')
 
-                stack = []
-            else:
-                frame_tensor = frame['data']
-                assert isinstance(frame_tensor, torch.Tensor)
+        #         stack = []
+        #     else:
+        #         frame_tensor = frame['data']
+        #         assert isinstance(frame_tensor, torch.Tensor)
                 
-                stack.append(frame_tensor.detach().numpy())
+        #         stack.append(frame_tensor.detach().numpy())
                 
-        if len(stack) > 0:
-            self._save_clip(stack)
+        # if len(stack) > 0:
+        #     self._save_clip(stack)
+        #     self.clip_count += 1
+
+        prev = None
+
+        start_idx = 0.0
+        spc = self.fpc / 30
+
+        clip = torch.randn(2)
+
+        while torch.numel(clip) > 0:
+            clip = read_video(filename=self.video_file, start_pts=start_idx, end_pts=start_idx + spc - (1/30), pts_unit='sec', output_format='THWC')[0]
+
+            if clip.shape[0] == 1:
+                if prev is None:
+                    prev = clip
+                elif prev is not None and torch.eq(prev, clip):
+                    break
+
+            self._save_clip(clip=clip)
             self.clip_count += 1
+            
