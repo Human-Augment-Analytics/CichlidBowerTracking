@@ -13,6 +13,7 @@ parser.add_argument('ClipFile', type=int, help='The filepath of the video clip t
 parser.add_argument('ClipIndex', type=int, help='Essentially the clip number')
 parser.add_argument('StartingFrameIndex', type=int, help='The index from the larger video at which the first frame of the clip is located')
 parser.add_argument('--dim', type=int, help='The dimension to be used in resizing the BBox images')
+parser.add_argument('--debug', type=bool, help='Boolean flag to put the BBoxCollector in debug mode')
 
 args = parser.parse_args()
 
@@ -27,6 +28,7 @@ fm_obj.createDirectory(video_obj.localVideoBBoxImagesDir)
 
 # create BBoxCollector and run collection function
 dim = 128 if args.dim is None else args.dim
+debug = False if args.debug is None else args.debug
 
 print(f'Creating BBoxCollector for video {video_obj.baseName}')
-bboxc_obj = BBoxCollector(clip_file=args.ClipFile, detections_file=video_obj.localFishDetectionsFile, bboxes_dir=video_obj.localVideoBBoxImagesDir, clip_index=args.ClipIndex, starting_frame_index=args.StartingFrameIndex, dim=dim)
+bboxc_obj = BBoxCollector(clip_file=args.ClipFile, detections_file=video_obj.localFishDetectionsFile, bboxes_dir=video_obj.localVideoBBoxImagesDir, clip_index=args.ClipIndex, starting_frame_index=args.StartingFrameIndex, dim=dim, debug=debug)

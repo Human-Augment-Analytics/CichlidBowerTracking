@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 class VideoClipper:
-    def __init__(self, video_index: int, video_file: str, clips_dir: str, fps=30, fpc=1800):
+    def __init__(self, video_index: int, video_file: str, clips_dir: str, fps=30, fpc=300, debug=False):
         '''
         Initializes an instance of the VideoClipper class.
 
@@ -25,6 +25,8 @@ class VideoClipper:
         self.fpc = fpc
         self.fps = fps
 
+        self.debug = debug
+
         self.clip_count = 0
         self.reader = VideoReader(self.video_file)
 
@@ -36,14 +38,23 @@ class VideoClipper:
             stack: a list containing NumPy ndarray frames from the passed video.
         '''
         
-        clip = torch.tensor(np.array(stack), dtype=torch.uint64)
+        if self.debug:
+            print(f'\t...converting to Tensor')
         
-        filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count)))}clip'
+        clip = torch.tensor(np.array(stack), dtype=torch.uint8)
+
+        t, c, h, w = clip.shape
+        clip = clip.reshape((t, h, w, c))
+        
+        filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count + 1)))}{self.clip_count + 1}'
         filename = os.path.join(self.clips_dir, filename)
 
         video_codec = 'h264'
 
-        write_video(filename, clip, self.fps, video_codec=video_codec)
+        if self.debug:
+            print(f'\t...writing clip {filename}.mp4')
+        
+        write_video(f'{filename}.mp4', clip, self.fps, video_codec=video_codec)
 
     def run(self) -> None:
         '''
@@ -53,17 +64,24 @@ class VideoClipper:
         '''
         
         stack = []
+        if self.debug:
+            print('\t...beginning frame iteration')
 
         for frame in self.reader:
             if len(stack) >= self.fpc:
                 self._save_clip(stack)
                 self.clip_count += 1
+
+                if self.debug:
+                    print(f'\t...clip #{self.clip_count} done')
+
+                stack = []
             else:
                 frame_tensor = frame['data']
                 assert isinstance(frame_tensor, torch.Tensor)
                 
                 stack.append(frame_tensor.detach().numpy())
-        
+                
         if len(stack) > 0:
             self._save_clip(stack)
             self.clip_count += 1

@@ -20,7 +20,7 @@ IMG_H = 972
 # RESZ_DIM = 100
 
 class BBoxCollector:
-    def __init__(self, clip_file: str, detections_file: str, bboxes_dir: str, clip_index: int, starting_frame_index: int, dim=128):
+    def __init__(self, clip_file: str, detections_file: str, bboxes_dir: str, clip_index: int, starting_frame_index: int, dim=128, debug=False):
         '''
         Create and initialize an instance of the BBoxCollector class.
 
@@ -40,6 +40,7 @@ class BBoxCollector:
         self.clip_index = clip_index
         self.starting_frame_idx = starting_frame_index
         self.dim = dim
+        self.debug = debug
 
         # list to store each collected bbox, organized by frame
         self.bboxes = dict()
@@ -219,16 +220,23 @@ class BBoxCollector:
         # Returns: a Boolean indicating that the data distillation preparer was successfully run.
 
         # handle conversion from self.videoObj to Tensor using the PyTorch read_video function
-        print(f'Running BBox collection on video clip {self.clip_file.split("/")[-1]}...')
+
+        if self.debug:
+            print(f'Running BBox collection on video clip {self.clip_file.split("/")[-1]}...')
+        
         video = read_video(self.clip_file, output_format='TCHW')
         
-        print(f'\t\tVideo {self.clip_file.split("/")[-1]} shape: {video.shape}')
         # iteratively save bboxes to dictionary
-        print(f'\t...Iterating through video clip {self.clip_file.split("/")[-1]}')
+        if self.debug:
+            print(f'\t\tVideo {self.clip_file.split("/")[-1]} shape: {video.shape}')
+            print(f'\t...Iterating through video clip {self.clip_file.split("/")[-1]}')
+        
         self._iterate(video=video)
 
         # save each collected bbox to individual PNG files
-        print(f'\t...Saving BBoxes collected from video clip {self.clip_file.split("/")[-1]}')
+        if self.debug:
+            print(f'\t...Saving BBoxes collected from video clip {self.clip_file.split("/")[-1]}')
+    
         self._save_images(imgtype='png')
 
         # save bboxes dictionary as JSON
@@ -236,5 +244,7 @@ class BBoxCollector:
 
         # return True
 
-        print(f'\tDone collecting from video clip{self.clip_file.split("/")[-1]}')
+        if self.debug:
+            print(f'\tDone collecting from video clip{self.clip_file.split("/")[-1]}')
+        
         return self.bboxes

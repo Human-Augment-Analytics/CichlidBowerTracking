@@ -12,6 +12,7 @@ parser.add_argument('--Workers', type = int, help = 'Number of workers to use to
 parser.add_argument('--VideoIndex', nargs = '+', help = 'Restrict which videos to run the analysis on')
 parser.add_argument('--FPC', type=int, help='Specific to the "CollectBBoxes" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
 parser.add_argument('--Dim', type=int, help='Specific to the "CollectBBoxes" option, this indicates what dimension should be used in resizing bbox images collected')
+parser.add_argument('--Debug', type=bool, help='Runs the passed AnalysisType with debug modes on (if available)')
 
 args = parser.parse_args()
 
@@ -136,12 +137,15 @@ elif args.AnalysisType == 'CollectBBoxes':
 		py_command = ['python3', '-m', 'unit_scripts.clip_video', args.AnalysisID, args.ProjectID, f'{videoIndex}']
 		if args.FPC is not None:
 			py_command += ['--fpc', f'{args.FPC}']
+		# if args.Debug is not None:
+		# 	py_command += ['--debug', f'{args.Debug}']
 
 		py_command = ' '.join(py_command)
 		full_command = base_command + py_command
 
 		commands.append('bash -c \"' + full_command + '\"')
 
+	print(f'\nClipping videos\n')
 	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
 	command_idx = 0
@@ -150,27 +154,34 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 		if p1.returncode != 0:
 			raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
-		
 
 	# construct and store collection commands
 	commands = []
 
-	clip_index, starting_frame_index = 0, 0
+	clip_index = 0
 	for videoIndex in videos:
-		print(f'videoIndex: {videoIndex}')
+		# print(f'videoIndex: {videoIndex}')
 
 		video_obj = fm_obj.returnVideoObject(videoIndex)
 		clip_files = os.listdir(video_obj.localVideoClipsDir)
 
+		starting_frame_index = 0
 		for clip_file in clip_files:
 			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{clip_index}', f'{starting_frame_index}']
 			if args.Dim is not None:
 				py_command += ['--dim', f'{args.Dim}']
+			if args.Debug is not None:
+				py_command += ['--debug', f'{args.Debug}']
 
 			py_command = ' '.join(py_command)
 			full_command = base_command + py_command
 
 			commands.append('bash -c \"' + full_command + '\"')
+
+			if args.FPC is not None:
+				starting_frame_index += args.FPC
+
+		clip_index += 1
 	
 	# execute stored collection commands for each video
 	processes = [subprocess.Popen(command, shell=True) for command in commands]
