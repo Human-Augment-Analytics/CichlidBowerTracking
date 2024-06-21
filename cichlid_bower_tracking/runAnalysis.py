@@ -9,7 +9,7 @@ if PROJECT_ROOT not in sys.path:
 
 # Create arguments for the script
 parser = argparse.ArgumentParser(description='This script is used to manually prepared projects for downstream analysis')
-parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'AssociateClustersWithTracks', 'CollectBBoxes', 'Summary'], help='Type of analysis to run')
+parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'AssociateClustersWithTracks', 'CollectBBoxes', 'ClipVideos', 'Summary'], help='Type of analysis to run')
 parser.add_argument('AnalysisID', type = str, help = 'ID of analysis state name')
 parser.add_argument('--ProjectIDs', type=str, nargs='+', help='Optional name of projectIDs to restrict the analysis to')
 parser.add_argument('--Workers', type=int, help='Number of workers')
