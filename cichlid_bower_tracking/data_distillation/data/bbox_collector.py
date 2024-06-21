@@ -215,11 +215,11 @@ class BBoxCollector:
                 w, c, h = bbox_tensor.shape
                 bbox_tensor = bbox_tensor.reshape(c, h, w)
                 
-                filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index + 1)))}_'
-                filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}_'
+                filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index + 1)))}{self.clip_index + 1}_'
+                filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}{frame_idx}_'
                 filename += f'n{counts[frame_idx]}'
 
-                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'{imgtype}'), format=f'{imgtype}')
+                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'.{imgtype}'), format=f'{imgtype}')
 
     def run(self) -> Dict:
         '''

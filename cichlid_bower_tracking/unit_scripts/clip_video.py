@@ -19,8 +19,8 @@ print(f'Getting video {args.VideoIndex}')
 fm_obj = FileManager(analysisID=args.AnalysisID, projectID=args.ProjectID, check=True)
 video_obj = fm_obj.returnVideoObject(args.VideoIndex)
 
-# create local BBox Images storage directory for specified video (if necessary)
-if not os.path.exists(video_obj.localVideoClipsDir):
+# create local Video Clips storage directory for specified video
+if os.path.exists(video_obj.localVideoClipsDir):
     print(f'Cleaning out video clips directory {video_obj.localVideoClipsDir.rstrip("/").split("/")[-1]}')
 
     shutil.rmtree(video_obj.localVideoClipsDir)
@@ -29,7 +29,7 @@ else:
 
 fm_obj.createDirectory(video_obj.localVideoClipsDir)
 
-# create VideoClipper and generate video clips (if necessary)
+# create VideoClipper and generate video clips
 fpc = 300 if args.fpc is None else args.fpc
 debug = False if args.debug is None else args.debug
 

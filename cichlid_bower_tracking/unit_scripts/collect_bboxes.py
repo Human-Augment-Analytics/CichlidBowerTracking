@@ -1,4 +1,4 @@
-import argparse
+import argparse, os, shutil
 
 from data_distillation.data.bbox_collector import BBoxCollector
 from helper_modules.file_manager import FileManager
@@ -17,13 +17,20 @@ parser.add_argument('--debug', type=bool, help='Boolean flag to put the BBoxColl
 
 args = parser.parse_args()
 
-# create FileManager object and get video object using passed arguments
-print(f'Getting video {args.VideoIndex} clip {args.ClipIndex}')
+# create FileManager object using passed arguments
+print(f'Using video {args.VideoIndex} clip {args.ClipIndex}')
+
 fm_obj = FileManager(analysisID=args.AnalysisID, projectID=args.ProjectID, check=True)
 video_obj  = fm_obj.returnVideoObject(args.VideoIndex)
 
 # create local BBox Images storage directory for specified video
-print(f'Creating BBox images directory {video_obj.localVideoBBoxImagesDir.rstrip("/").split("/")[-1]}')
+if os.path.exists(video_obj.localVideoBBoxImagesDir):
+    print(f'Cleaning out bbox images directory {video_obj.localVideoBBoxImagesDir.rstrip("/").split("/")[-1]}')
+
+    shutil.rmtree(video_obj.localVideoBBoxImagesDir)
+else:
+    print(f'Creating bbox images directory {video_obj.localVideoBBoxImagesDir.rstrip("/").split("/")[-1]}')
+
 fm_obj.createDirectory(video_obj.localVideoBBoxImagesDir)
 
 # create BBoxCollector and run collection function
