@@ -219,7 +219,7 @@ class BBoxCollector:
                 filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}_'
                 filename += f'n{counts[frame_idx]}'
 
-                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'{imgtype}'), format='png')
+                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'{imgtype}'), format=f'{imgtype}')
 
     def run(self) -> Dict:
         '''
@@ -258,6 +258,6 @@ class BBoxCollector:
         # return True
 
         if self.debug:
-            print(f'\tDone collecting from video clip{self.clip_file.split("/")[-1]}')
+            print(f'\tDone collecting from video clip {self.clip_file.split("/")[-1]}')
         
         return self.bboxes
