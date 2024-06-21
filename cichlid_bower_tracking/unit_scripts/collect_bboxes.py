@@ -11,7 +11,7 @@ parser.add_argument('ProjectID', type=str, help='Indicates which project the BBo
 parser.add_argument('ClipFile', type=str, help='The filepath of the video clip to be collected from')
 parser.add_argument('VideoIndex', type=int, help='The index of the video in the file system')
 parser.add_argument('ClipIndex', type=int, help='Essentially the clip number')
-parser.add_argument('StartingFrameIndex', type=int, help='The index from the larger video at which the first frame of the clip is located')
+parser.add_argument('StartingFrameIndex', type=int, help='The index from the larger video at which the first frame of the clip is located (1-indexed)')
 parser.add_argument('--dim', type=int, help='The dimension to be used in resizing the BBox images')
 parser.add_argument('--debug', type=bool, help='Boolean flag to put the BBoxCollector in debug mode')
 
