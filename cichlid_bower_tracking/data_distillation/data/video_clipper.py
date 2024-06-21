@@ -17,6 +17,8 @@ class VideoClipper:
             fps: an int indicating the framerate of the passed video (and therefore the clips); defaults to 30.
             fpc: an int indicating the number of "frames per clip"; defaults to 1800, or 1 minute (assuming fps=30).
         '''
+
+        self.__version__ = '0.1.0'
         
         self.video_index = video_index
         self.video_file = video_file
