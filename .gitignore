@@ -2,3 +2,5 @@
 cichlid_bower_tracking/debug.py
 cichlid_bower_tracking/monkey_patches
 *.pyc
+# personal notes/files
+personal_commands.txt

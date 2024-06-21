@@ -17,6 +17,9 @@ class FishTrackingPreparer():
 		self.fileManager.downloadData(self.fileManager.localYolov5WeightsFile)
 
 	def validateInputData(self):
+		# print(f'detections file: {self.videoObj.localFishDetectionsFile}')
+		# print(f'tracks file: {self.videoObj.localFishTracksFile}')
+
 		assert os.path.exists(self.videoObj.localVideoFile)
 
 		assert os.path.exists(self.fileManager.localTroubleshootingDir)
@@ -38,7 +41,18 @@ class FishTrackingPreparer():
 		command.extend(['--project', self.annotations_dir])
 		command.extend(['--save-txt', '--nosave', '--save-conf','--agnostic-nms'])
 
-		command = "source " + os.getenv('HOME') + "/anaconda3/etc/profile.d/conda.sh; conda activate yolov5; " + ' '.join(command)
+		# dynamically obtain anaconda distro directory in HOME
+		home_subdirs = os.listdir(os.getenv('HOME'))
+		# print(f'\nhome_subdirs:\n{home_subdirs}\n')
+
+		if 'anaconda3' in home_subdirs:
+			conda_dir = 'anaconda3'
+		elif 'miniconda3' in home_subdirs:
+			conda_dir = 'miniconda3'
+		else:
+			raise Exception(f'FishTrackingPreparer Error: Missing anaconda distribution from {os.getenv("HOME")}')
+
+		command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate yolov5; " + ' '.join(command)
 
 		os.chdir(os.getenv('HOME') + '/yolov5')
 		print('bash -c \"' + command + '\"')
@@ -49,12 +63,22 @@ class FishTrackingPreparer():
 	def runSORT(self):
 		self.annotations_dir = self.fileManager.localTempDir + self.videoObj.localVideoFile.split('/')[-1].replace('.mp4','')
 
+		# dynamically obtain anaconda distro directory in HOME
+		home_subdirs = os.listdir(os.getenv('HOME'))
+
+		if 'anaconda3' in home_subdirs:
+			conda_dir = 'anaconda3'
+		elif 'miniconda3' in home_subdirs:
+			conda_dir = 'miniconda3'
+		else:
+			raise Exception(f'FishTrackingPreparer Error: Missing anaconda distribution from {os.getenv("HOME")}')
+		
 		os.chdir(os.getenv('HOME') + '/CichlidBowerTracking/cichlid_bower_tracking')
 		print('Running Sort detection on ' + self.videoObj.baseName + ' ' + str(datetime.datetime.now()), flush = True)
 
 		command = ['python3', 'unit_scripts/sort_detections.py', self.annotations_dir + '/exp/labels/', self.videoObj.localFishDetectionsFile, self.videoObj.localFishTracksFile, self.videoObj.baseName]
 
-		command = "source " + os.getenv('HOME') + "/anaconda3/etc/profile.d/conda.sh; conda activate CichlidSort; " + ' '.join(command)
+		command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidSort; " + ' '.join(command)
 		#subprocess.run('bash -c \"' + command + '\"', shell = True)
 
 		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingerrors.txt', 'w'), stdout=subprocess.DEVNULL)

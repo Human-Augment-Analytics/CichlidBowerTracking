@@ -1,6 +1,8 @@
-import os, subprocess, pdb, platform, shutil
+import os, subprocess, pdb, platform, shutil, math
 from helper_modules.log_parser import LogParser as LP
 import pandas as pd 
+
+from misc.pace_vars import USING_PACE
 
 class FileManager():
     def __init__(self, analysisID = 'MC_multi', projectID = None, rcloneRemote = 'CichlidPiData:', masterDir = 'BioSci-McGrath/Apps/CichlidPiData/', check = False):
@@ -9,6 +11,8 @@ class FileManager():
             self._identifyPiDirectory()
         elif platform.node() == 'ebb-utaka.biosci.gatech.edu':
             self.localMasterDir = '/mnt/Storage/' + os.getenv('USER') + '/Temp/CichlidAnalyzer/'
+        elif USING_PACE:
+            self.localMasterDir = os.getenv('HOME').rstrip('/') + '/' + 'scratch' + '/' + 'Temp/CichlidAnalyzer/' 
         else:
             self.localMasterDir = os.getenv('HOME').rstrip('/') + '/' + 'Temp/CichlidAnalyzer/'
 
@@ -51,7 +55,7 @@ class FileManager():
                 
     def identifyProjectsToRun(self, analysis_type, filtered_projectIDs):
         self.downloadData(self.localSummaryFile)
-        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'Summary': str})
+        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'CollectBBoxes': str, 'Summary': str})
 
         # Identify projects to run on:
         sub_dt = dt[dt.RunAnalysis.str.upper() == 'TRUE'] # Only analyze projects that are indicated
@@ -75,15 +79,28 @@ class FileManager():
             sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.ClusterClassification.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
+        elif analysis_type == 'CollectBBoxes':
+            sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
 
-        projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it
-
+        projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it        
+        
         # Filter out projects if optional argment given
-        if filtered_projectIDs is not None:
-            for projectID in projectIDs:
-                if projectID not in filtered_projectIDs:
-                    projectIDs.remove(projectID)
-        return projectIDs
+
+        # if filtered_projectIDs is not None:
+        #     for projectID in projectIDs:
+        #         print(f'{projectID} not in {filtered_projectIDs}? {projectID not in filtered_projectIDs}')
+                
+        #         if projectID not in filtered_projectIDs:
+        #             print(f'\t{projectID} to be reomved!')
+        #             projectIDs.remove(projectID)
+
+        # print(f'\n\tnew projectIDs:\n{projectIDs}')
+
+        intersect_projectIDs = list(set(projectIDs) & set(filtered_projectIDs))
+
+        return intersect_projectIDs
 
     def updateSummaryFile(self, projectID, analysis_type):
         self.downloadData(self.localSummaryFile)
@@ -96,7 +113,7 @@ class FileManager():
     def getProjectStates(self):
 
         # Dictionary to hold row of data
-        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'Summary': False}
+        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'CollectBBoxes': False,'Summary': False}
 
         # List the files needed for each analysis
         necessaryFiles = {}
@@ -106,6 +123,7 @@ class FileManager():
         necessaryFiles['Cluster'] = [self.localAllClipsDir, self.localManualLabelClipsDir, self.localManualLabelFramesDir]
         necessaryFiles['ClusterClassification'] = [self.localAllLabeledClustersFile]
         necessaryFiles['TrackFish'] = [self.localAllFishDetectionsFile, self.localAllFishTracksFile]
+        necessaryFiles['CollectBBoxes'] = [self.localAllFishDetectionsFile]
 
         necessaryFiles['Summary'] = [self.localSummaryDir]
 
@@ -343,14 +361,14 @@ class FileManager():
             self.createDirectory(self.localLogfileDir)
             self.createDirectory(self.localMasterDir)
             self.createDirectory(self.localAnalysisDir)
+            self.createDirectory(self.localTroubleshootingDir)
             self.createDirectory(self.localTempDir)
 
             self.downloadData(self.localLogfile)
-            self.downloadData(self.localOldVideoCropFile)
-            self.downloadData(self.localAllLabeledClustersFile)
-            self.downloadData(self.localTroubleshootingDir)
-            self.downloadData(self.localAnalysisDir)
-
+            # self.downloadData(self.localOldVideoCropFile)
+            # self.downloadData(self.localAllLabeledClustersFile)
+            # # self.downloadData(self.localTroubleshootingDir)
+            # self.downloadData(self.localAnalysisDir)
             self.downloadData(self.localYolov5WeightsFile)
 
             try:
@@ -364,6 +382,26 @@ class FileManager():
                 self.downloadData(videoObj.localVideoFile)
             else:
                 print('Downloading video ' + self.localVideoDir)
+                self.downloadData(self.localVideoDir)
+
+        elif dtype == 'CollectBBoxes':
+            self.createDirectory(self.localLogfile)
+            self.createDirectory(self.localMasterDir)
+            self.createDirectory(self.localAnalysisDir)
+            self.createDirectory(self.localTroubleshootingDir)
+            # self.createDirectory(self.localBBoxImagesDir)
+            self.createDirectory(self.localTempDir)
+
+            self.downloadData(self.localLogfile)
+            self.downloadData(self.localAnalysisDir)
+            self.downloadData(self.localTroubleshootingDir)
+            
+            if videoIndex is not None:
+                videoObj = self.returnVideoObject(videoIndex)
+                print(f'Downloading video {videoIndex}')
+                self.download(videoObj.localVideoFile)
+            else:
+                print (f'Downloading video directory {self.localVideoDir}')
                 self.downloadData(self.localVideoDir)
 
         elif dtype == 'AssociateClustersWithTracks':
@@ -468,7 +506,7 @@ class FileManager():
             if not no_upload:
                 self.uploadData(self.localAllFishTracksFile)
                 self.uploadData(self.localAllFishDetectionsFile)
-                self.uploadData(self.localAllTracksSummaryFile)
+                # self.uploadData(self.localAllTracksSummaryFile)
                 for videoIndex in range(len(self.lp.movies)):
                     videoObj = self.returnVideoObject(videoIndex)
                     self.uploadData(videoObj.localFishTracksFile)
@@ -477,6 +515,15 @@ class FileManager():
             if delete:
                 shutil.rmtree(self.localProjectDir)
                 #os.remove(self.localYolov5WeightsFile)
+        elif dtype == 'CollectBBoxes':
+            if not no_upload:
+                for videoIndex in range(len(self.lp.movies)):
+                    videoObj = self.returnVideoObject(videoIndex)
+
+                    self.uploadData(videoObj.localVideoBBoxImagesDir)
+            if delete:
+                shutil.rmtree(self.localProjectDir)
+
         elif dtype == 'AddFishSex':
             if not no_upload:
                 self.uploadData(self.localAllFishSexFile)
@@ -505,7 +552,10 @@ class FileManager():
         videoObj.localFishDetectionsFile = self.localTroubleshootingDir + videoObj.baseName + '_fishDetections.csv'
         videoObj.localFishTracksFile = self.localTroubleshootingDir + videoObj.baseName + '_fishTracks.csv'
         videoObj.localFishSexFile = self.localTroubleshootingDir + videoObj.baseName + '_fishSex.csv'
-        videoObj.localAvgImgsFile = self.localTroubleshootingDir + videoObj.baseName + '_avg_imgs.npz'
+
+        # define local video clip and bbox image storage locations for each video
+        videoObj.localVideoClipsDir = self.localTroubleshootingDir + videoObj.baseName + '_Clips/'
+        videoObj.localVideoBBoxImagesDir = self.localTroubleshootingDir + videoObj.baseName + '_BBoxImages/'
         
         videoObj.localAllClipsDir = self.localAllClipsDir + videoObj.baseName + '/'
         videoObj.localManualLabelClipsDir = self.localManualLabelClipsDir + videoObj.baseName + '/'
@@ -608,6 +658,9 @@ class FileManager():
         cloud_path = local_path.replace(self.localMasterDir, self.cloudMasterDir)
 
         cloud_objects = subprocess.run(['rclone', 'lsf', cloud_path], capture_output = True, encoding = 'utf-8').stdout.split()
+
+        # print(f'file: {relative_name}')
+        # print(f'cloud path: {cloud_path}')
 
         if relative_name + '/' in cloud_objects: #directory
             output = subprocess.run(['rclone', 'copy', cloud_path + relative_name, local_path + relative_name], capture_output = True, encoding = 'utf-8')

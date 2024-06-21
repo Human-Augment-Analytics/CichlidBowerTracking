@@ -9,10 +9,13 @@ if PROJECT_ROOT not in sys.path:
 
 # Create arguments for the script
 parser = argparse.ArgumentParser(description='This script is used to manually prepared projects for downstream analysis')
-parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'AssociateClustersWithTracks', 'AvgImgDistillation', 'Summary'], help='Type of analysis to run')
+parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster', 'ClusterClassification', 'TrackFish', 'AssociateClustersWithTracks', 'CollectBBoxes', 'ClipVideos', 'Summary'], help='Type of analysis to run')
 parser.add_argument('AnalysisID', type = str, help = 'ID of analysis state name')
 parser.add_argument('--ProjectIDs', type=str, nargs='+', help='Optional name of projectIDs to restrict the analysis to')
 parser.add_argument('--Workers', type=int, help='Number of workers')
+parser.add_argument('--FPC', type=int, help='Indicates the number of frames per clip; specific to the "CollectBBoxes" AnalysisType')
+parser.add_argument('--Dim', type=int, help='Indicates the dimension that should be used in resizing collected bbox images; specific to the "CollectBBoxes" AnalysisType')
+parser.add_argument('--Debug', type=bool, help='Runs the analysis with debug modes on')
 args = parser.parse_args()
 
 
@@ -46,8 +49,18 @@ subprocess.run(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType
 while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
+    # dynamically construct command
+    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID]
+    if args.FPC is not None:
+        command += ['--FPC', f'{args.FPC}']
+    if args.Dim is not None:
+        command += ['--Dim', f'{args.Dim}']
+    if args.Debug is not None:
+        command += ['--Debug', f'{args.Debug}']
+
+    # run constructed command
     print('Running: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
-    p1 = subprocess.Popen(['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID])
+    p1 = subprocess.Popen(command)
 
     # Download data for the next project in the background
     if len(projectIDs) != 0:

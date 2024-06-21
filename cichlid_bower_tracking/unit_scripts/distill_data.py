@@ -13,7 +13,7 @@ parser = argparse.ArgumentParser(usage='This script runs a data distiller on the
 
 parser.add_argument('VideoFile', type=str, help='This is the filepath of the video to be used in image-averaging data distillation.')
 parser.add_argument('TracksFile', type=str, help='This is the filepath of the tracks CSV file to be used in cropping bboxes from the passed video.')
-parser.add_argument('AvgImgsFile', type=str, help='This is the path to the directory in which the average images will be saved.')
+parser.add_argument('AvgImgsFile', type=str, help='This is the filepath of the NumPy archive in which the average images will be saved.')
 parser.add_argument('--channels', type=int, help='This is the number of channels in the bbox images, should be 3 for RGB.')
 parser.add_argument('--dim', type=int, help='This is the dimension size to be used as the length and width.')
 parser.add_argument('--precision', type=int, choices=[8, 16, 32, 64], help='This is the precision to be used during the averaging process.')

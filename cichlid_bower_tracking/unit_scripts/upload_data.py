@@ -1,7 +1,7 @@
 # Things to add
 
 import argparse,sys
-from cichlid_bower_tracking.helper_modules.file_manager import FileManager as FM
+from helper_modules.file_manager import FileManager as FM
 
 parser = argparse.ArgumentParser()
 parser.add_argument('DataType', type = str, choices=['Prep','Depth','Cluster','ClusterClassification', 'TrackFish', 'Train3DResnet', 'ManualLabelVideos','Summary','All'], help = 'What type of analysis to perform')
