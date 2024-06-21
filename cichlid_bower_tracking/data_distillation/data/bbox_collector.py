@@ -1,7 +1,9 @@
+from typing import Dict
+
 from torchvision.transforms.functional import resize, InterpolationMode
 from torchvision.io import read_video 
 from torchvision.utils import save_image
-from typing import Dict
+from torchvision.transforms.functional import to_tensor
 import torch
 
 import numpy as np
@@ -62,17 +64,22 @@ class BBoxCollector:
         '''
         
         # store the longest dimension length like in Bree's cropping method
-        max_dim = max(int(width) + 1, int(height) + 1)
+        max_dim = (max(abs(int(width)) + 1, abs(int(height)) + 1))
+        # print(f'dim: {max_dim}')
 
         # get bbox coordinates based on Bree's cropping method (PyTorch instead of openCV)
-        x_upperleft = int(max(0, x_center - (max_dim)))
-        y_upperleft = int(max(0, y_center - (max_dim)))
+        x_lo = int(max(0, x_center - max_dim))
+        y_lo = int(max(0, y_center - max_dim))
 
-        x_lowerright = int(max(0, x_center + (max_dim)))
-        y_lowerright = int(max(0, y_center + (max_dim)))
+        x_hi = int(max(0, x_center + max_dim))
+        y_hi = int(max(0, y_center + max_dim))
 
+        # print(f'(x_lo, y_lo): ({x_lo}, {y_lo})')
+        # print(f'(x_hi, y_hi): ({x_hi}, {y_hi})')
+        
         # get and return bbox by slicing passed frame
-        bbox = frame[:, x_upperleft:x_lowerright + 1, y_upperleft:y_lowerright + 1]
+        bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]
+        # print(f'bbox shape: {bbox.shape}')
         
         return bbox
 
@@ -173,7 +180,7 @@ class BBoxCollector:
 
         # iterate by frame
         for _, row in detections_df.iterrows():
-            frame_idx = detections_df['frame'] - self.starting_frame_idx
+            frame_idx = row['frame'] - self.starting_frame_idx
 
             x1, x2 = row['x1'], row['x2']
             y1, y2 = row['y1'], row['y2']
@@ -181,7 +188,9 @@ class BBoxCollector:
             width, height = x1 - x2 + 1, y1 - y2 + 1
             x_center, y_center = x2 + (width // 2), y2 + (height // 2)
 
-            self._save_bbox(frame_idx, clip[frame_idx, :, :, :], x_center, y_center, width, height)
+            # print(f'frame shape: {clip[frame_idx, :, :, :].shape}')
+
+            self._save_bbox(frame_idx, clip[frame_idx - 1, :, :, :], x_center, y_center, width, height)
 
     def _save_images(self, imgtype='png') -> None:
         '''
@@ -194,20 +203,23 @@ class BBoxCollector:
 
         for frame_idx, bboxes_list in self.bboxes.items():
             for bbox in bboxes_list:
-                assert bbox.shape == (3, self.dim, self.dim)
+                # assert bbox.shape == (3, self.dim, self.dim)
 
-                if frame_idx in list(self.counts.keys()):
+                if frame_idx in list(counts.keys()):
                     counts[frame_idx] += 1
                 else:
                     counts[frame_idx] = 1
 
-                bbox_tensor = torch.tensor(bbox, dtype=torch.uint64)
+                bbox_tensor = to_tensor(bbox)
+
+                w, c, h = bbox_tensor.shape
+                bbox_tensor = bbox_tensor.reshape(c, h, w)
                 
-                filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index)))}_'
+                filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index + 1)))}_'
                 filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}_'
                 filename += f'n{counts[frame_idx]}'
 
-                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'{imgtype}'))
+                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'{imgtype}'), format='png')
 
     def run(self) -> Dict:
         '''
@@ -224,14 +236,15 @@ class BBoxCollector:
         if self.debug:
             print(f'Running BBox collection on video clip {self.clip_file.split("/")[-1]}...')
         
-        video = read_video(self.clip_file, output_format='TCHW')
+        clip = read_video(self.clip_file, output_format='TCHW')[0]
+        # print(f'typeof video: {type(clip)}')
         
         # iteratively save bboxes to dictionary
         if self.debug:
-            print(f'\t\tVideo {self.clip_file.split("/")[-1]} shape: {video.shape}')
+            print(f'\t\tVideo {self.clip_file.split("/")[-1]} shape: {clip.shape}')
             print(f'\t...Iterating through video clip {self.clip_file.split("/")[-1]}')
         
-        self._iterate(video=video)
+        self._iterate(clip=clip)
 
         # save each collected bbox to individual PNG files
         if self.debug:

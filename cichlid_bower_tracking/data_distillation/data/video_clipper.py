@@ -48,7 +48,7 @@ class VideoClipper:
 
         # print(f'\t...clip #{self.clip_count + 1} shape: {clip.shape}')
         
-        filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count + 1)))}{self.clip_count + 1}'
+        filename = f'{"0" * (9 - math.floor(1 + math.log10(self.clip_count + 1)))}{self.clip_count + 1}clip'
         filename = os.path.join(self.clips_dir, filename)
 
         video_codec = 'h264'
@@ -91,7 +91,7 @@ class VideoClipper:
         prev = None
 
         start_idx = 0.0
-        spc = self.fpc / 30
+        spc = self.fpc / self.fps
 
         clip = torch.randn(2)
 

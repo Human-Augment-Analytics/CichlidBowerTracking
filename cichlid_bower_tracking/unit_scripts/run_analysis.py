@@ -113,7 +113,7 @@ elif args.AnalysisType == 'TrackFish':
 	c_dt_t.to_csv(fm_obj.localAllFishTracksFile)
 	c_dt_d.to_csv(fm_obj.localAllFishDetectionsFile)
 
-elif args.AnalysisType == 'CollectBBoxes':	
+elif args.AnalysisType == 'ClipVideos':	
 	if args.VideoIndex is None:
 		videos = list(range(len(fm_obj.lp.movies)))
 	else:
@@ -145,17 +145,34 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 		commands.append('bash -c \"' + full_command + '\"')
 
-	print(f'\nClipping videos\n')
 	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
+	# command_idx = 0
 	for p1 in processes:
 		p1.communicate()
 
 		if p1.returncode != 0:
 			# raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
-			raise Exception()
+			raise Exception('Video Clipping Error')
 
+elif args.AnalysisType == 'CollectBBoxes':	
+	if args.VideoIndex is None:
+		videos = list(range(len(fm_obj.lp.movies)))
+	else:
+		videos = args.VideoIndex
+
+	# # dynamically obtain anaconda distro directory in HOME
+	home_subdirs = os.listdir(os.getenv('HOME'))
+
+	if 'anaconda3' in home_subdirs:
+		conda_dir = 'anaconda3'
+	elif 'miniconda3' in home_subdirs:
+		conda_dir = 'miniconda3'
+	else:
+		raise Exception(f'Conda Error: Missing anaconda distribution from {os.getenv("HOME")}')
+	
 	# construct and store collection commands
+	base_command = 'source ' + os.getenv('HOME') + f'/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation; '
 	commands = []
 
 	clip_index = 0
@@ -167,7 +184,7 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 		starting_frame_index = 0
 		for clip_file in clip_files:
-			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{clip_index}', f'{starting_frame_index}']
+			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{args.VideoIndex}, 'f'{clip_index}', f'{starting_frame_index}']
 			if args.Dim is not None:
 				py_command += ['--dim', f'{args.Dim}']
 			if args.Debug is not None:
@@ -190,14 +207,15 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 	# 	if len(processes) < 
 
+	processes = [subprocess.Popen(command, shell=True) for command in commands]
 
-
-	command_idx = 0
+	# command_idx = 0
 	for p2 in processes:
 		p2.communicate()
 
 		if p2.returncode != 0:
-			raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
+			# raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
+			raise Exception('BBox Collection Error')
 
 elif args.AnalysisType == 'AssociateClustersWithTracks':
 	from data_preparers.cluster_track_association_preparer_new import ClusterTrackAssociationPreparer as CTAP
