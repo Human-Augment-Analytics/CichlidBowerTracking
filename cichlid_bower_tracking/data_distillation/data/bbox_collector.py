@@ -190,7 +190,7 @@ class BBoxCollector:
 
             # print(f'frame shape: {clip[frame_idx, :, :, :].shape}')
 
-            self._save_bbox(frame_idx, clip[frame_idx - 1, :, :, :], x_center, y_center, width, height)
+            self._save_bbox(frame_idx + 1, clip[frame_idx, :, :, :], x_center, y_center, width, height)
 
     def _save_images(self, imgtype='png') -> None:
         '''
