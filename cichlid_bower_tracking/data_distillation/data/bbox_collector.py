@@ -232,7 +232,7 @@ class BBoxCollector:
                 img = PIL.Image.fromarray(bbox.transpose(2, 1, 0))
                 img.save(os.path.join(self.bboxes_dir, filename + f'.{imgtype}'))
 
-    def run(self) -> Dict:
+    def run(self) -> None:
         '''
         Runs the BBoxCollector pipeline.
 
@@ -271,4 +271,4 @@ class BBoxCollector:
         if self.debug:
             print(f'\tDone collecting from video clip {self.clip_file.split("/")[-1]}')
         
-        return self.bboxes
+        # return self.bboxes
