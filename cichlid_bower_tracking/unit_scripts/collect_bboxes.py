@@ -34,7 +34,7 @@ else:
 fm_obj.createDirectory(video_obj.localVideoBBoxImagesDir)
 
 # create BBoxCollector and run collection function
-dim = 128 if args.dim is None else args.dim
+dim = 256 if args.dim is None else args.dim
 debug = False if args.debug is None else args.debug
 
 print(f'Creating BBoxCollector for video {video_obj.baseName} clip {args.ClipFile.rstrip("/").split("/")[-1]}')

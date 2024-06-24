@@ -1,13 +1,15 @@
 from typing import Dict
 
+import PIL.Image
 from torchvision.transforms.functional import resize, InterpolationMode
 from torchvision.io import read_video 
-from torchvision.utils import save_image
-from torchvision.transforms.functional import to_tensor
+# from torchvision.utils import save_image
+# from torchvision.transforms.functional import to_tensor
 import torch
 
 import numpy as np
 import pandas as pd
+import PIL
 # import cv2
 
 import math, os
@@ -68,18 +70,23 @@ class BBoxCollector:
         # print(f'dim: {max_dim}')
 
         # get bbox coordinates based on Bree's cropping method (PyTorch instead of openCV)
-        x_lo = int(max(0, x_center - max_dim))
-        y_lo = int(max(0, y_center - max_dim))
+        x_lo = int(max(0, x_center - 0.5 * max_dim))
+        y_lo = int(max(0, y_center - 0.5 * max_dim))
 
-        x_hi = int(max(0, x_center + max_dim))
-        y_hi = int(max(0, y_center + max_dim))
+        x_hi = int(max(0, x_center + 0.5 * max_dim))
+        y_hi = int(max(0, y_center + 0.5 * max_dim))
 
         # print(f'(x_lo, y_lo): ({x_lo}, {y_lo})')
         # print(f'(x_hi, y_hi): ({x_hi}, {y_hi})')
         
         # get and return bbox by slicing passed frame
-        bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]
-        # print(f'bbox shape: {bbox.shape}')
+        bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]# .detach().numpy()
+        print(f'bbox shape: {bbox.shape}')
+
+        # img = PIL.Image.fromarray(bbox.transpose((2, 1, 0)))
+        # img.save(os.path.join(self.bboxes_dir, 'test.png'))
+
+        # bbox = torch.tensor(bbox, dtype=torch.uint8)
         
         return bbox
 
@@ -113,7 +120,7 @@ class BBoxCollector:
 
     #     return rot_bbox
     
-    def _resize_bbox(self, bbox: torch.Tensor, mode_str='bilinear') -> torch.Tensor:
+    def _resize_bbox(self, bbox: torch.Tensor, mode_str='nearest') -> torch.Tensor:
         '''
         Resizes the passed bbox PyTorch Tensor to have shape (dim, dim) using the value passed as an instance variable. 
 
@@ -190,11 +197,13 @@ class BBoxCollector:
 
             # print(f'frame shape: {clip[frame_idx, :, :, :].shape}')
 
-            self._save_bbox(frame_idx + 1, clip[frame_idx, :, :, :], x_center, y_center, width, height)
+            self._save_bbox(frame_idx, clip[frame_idx, :, :, :], x_center, y_center, width, height)
 
     def _save_images(self, imgtype='png') -> None:
         '''
         Saves the collected bbox images to individual files in the directory located at self.bboxes_dir.
+
+        
 
         Inputs:
             imgtype: the file format to be used in saving the bbox images; defaults to "png".
@@ -210,16 +219,18 @@ class BBoxCollector:
                 else:
                     counts[frame_idx] = 1
 
-                bbox_tensor = to_tensor(bbox)
+                # bbox_tensor = to_tensor(bbox)
 
-                w, c, h = bbox_tensor.shape
-                bbox_tensor = bbox_tensor.reshape(c, h, w)
+                # w, c, h = bbox_tensor.shape
+                # bbox_tensor = bbox_tensor.reshape(c, h, w)
                 
                 filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index + 1)))}{self.clip_index + 1}_'
                 filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}{frame_idx}_'
                 filename += f'n{counts[frame_idx]}'
 
-                save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'.{imgtype}'), format=f'{imgtype}')
+                # save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'.{imgtype}'), format=f'{imgtype}')
+                img = PIL.Image.fromarray(bbox.transpose(2, 1, 0))
+                img.save(os.path.join(self.bboxes_dir, filename + f'.{imgtype}'))
 
     def run(self) -> Dict:
         '''
