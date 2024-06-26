@@ -145,15 +145,22 @@ elif args.AnalysisType == 'ClipVideos':
 
 		commands.append('bash -c \"' + full_command + '\"')
 
-	processes = [subprocess.Popen(command, shell=True) for command in commands]
+	# processes = [subprocess.Popen(command, shell=True) for command in commands]
 
-	# command_idx = 0
-	for p1 in processes:
-		p1.communicate()
+	# # command_idx = 0
+	# for p1 in processes:
+	# 	p1.communicate()
+
+	# 	if p1.returncode != 0:
+	# 		# raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
+	# 		raise Exception('Video Clipping Error')
+
+	for command in commands:
+		p1 = subprocess.Popen(command, shell=True)
+		p1.wait()
 
 		if p1.returncode != 0:
-			# raise Exception(f'Video Clipping Error: "{commands[command_idx]}" subprocess returned non-zero code')
-			raise Exception('Video Clipping Error')
+			raise Exception(f'Video Clipping Error: "{command}"')
 
 elif args.AnalysisType == 'CollectBBoxes':	
 	if args.VideoIndex is None:

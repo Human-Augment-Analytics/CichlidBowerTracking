@@ -30,7 +30,7 @@ else:
 fm_obj.createDirectory(video_obj.localVideoClipsDir)
 
 # create VideoClipper and generate video clips
-fpc = 300 if args.fpc is None else args.fpc
+fpc = 150 if args.fpc is None else args.fpc
 debug = False if args.debug is None else args.debug
 
 print(f'Creating VideoClipper object')

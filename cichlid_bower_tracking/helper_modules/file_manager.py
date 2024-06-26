@@ -55,7 +55,7 @@ class FileManager():
                 
     def identifyProjectsToRun(self, analysis_type, filtered_projectIDs):
         self.downloadData(self.localSummaryFile)
-        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'CollectBBoxes': str, 'Summary': str})
+        dt = pd.read_csv(self.localSummaryFile, index_col = False, dtype = {'StartingFiles':str, 'RunAnalysis':str, 'Prep':str, 'Depth':str, 'Cluster':str, 'ClusterClassification':str,'TrackFish':str, 'AssociateClustersWithTracks':str, 'ClipVideos': str, 'CollectBBoxes': str, 'Summary': str})
 
         # Identify projects to run on:
         sub_dt = dt[dt.RunAnalysis.str.upper() == 'TRUE'] # Only analyze projects that are indicated
@@ -80,6 +80,11 @@ class FileManager():
             sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
             sub_dt = sub_dt[sub_dt.ClusterClassification.str.upper() == 'TRUE'] # Only analyze projects that have been prepped
         elif analysis_type == 'CollectBBoxes':
+            sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
+            sub_dt = sub_dt[sub_dt.ClipVideos.str.upper() == 'TRUE']
+        elif analysis_type == 'ClipVideos':
             sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
             sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
             sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
@@ -113,7 +118,7 @@ class FileManager():
     def getProjectStates(self):
 
         # Dictionary to hold row of data
-        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'CollectBBoxes': False,'Summary': False}
+        row_data = {'projectID':self.projectID, 'tankID':'', 'StartingFiles':False, 'Prep':False, 'Depth':False, 'Cluster':False, 'ClusterClassification':False, 'TrackFish': False, 'CollectBBoxes': False, 'ClipVideos': False, 'Summary': False}
 
         # List the files needed for each analysis
         necessaryFiles = {}
@@ -124,6 +129,7 @@ class FileManager():
         necessaryFiles['ClusterClassification'] = [self.localAllLabeledClustersFile]
         necessaryFiles['TrackFish'] = [self.localAllFishDetectionsFile, self.localAllFishTracksFile]
         necessaryFiles['CollectBBoxes'] = [self.localAllFishDetectionsFile]
+        necessaryFiles['ClipVideos'] = [self.localAllFishDetectionsFile]
 
         necessaryFiles['Summary'] = [self.localSummaryDir]
 
@@ -385,7 +391,7 @@ class FileManager():
                 self.downloadData(self.localVideoDir)
 
         elif dtype == 'CollectBBoxes':
-            self.createDirectory(self.localLogfile)
+            self.createDirectory(self.localLogfileDir)
             self.createDirectory(self.localMasterDir)
             self.createDirectory(self.localAnalysisDir)
             self.createDirectory(self.localTroubleshootingDir)
@@ -396,10 +402,29 @@ class FileManager():
             self.downloadData(self.localAnalysisDir)
             self.downloadData(self.localTroubleshootingDir)
             
+            # if videoIndex is not None:
+            #     videoObj = self.returnVideoObject(videoIndex)
+            #     print(f'Downloading video {videoIndex}')
+            #     self.download(videoObj.localVideoFile)
+            # else:
+            #     print (f'Downloading video directory {self.localVideoDir}')
+            #     self.downloadData(self.localVideoDir)
+
+        elif dtype == 'ClipVideos':
+            self.createDirectory(self.localLogfileDir)
+            self.createDirectory(self.localMasterDir)
+            self.createDirectory(self.localAnalysisDir)
+            self.createDirectory(self.localTroubleshootingDir)
+            self.createDirectory(self.localTempDir)
+
+            self.downloadData(self.localLogfile)
+            self.downloadData(self.localAnalysisDir)
+            self.downloadData(self.localTroubleshootingDir)
+
             if videoIndex is not None:
                 videoObj = self.returnVideoObject(videoIndex)
                 print(f'Downloading video {videoIndex}')
-                self.download(videoObj.localVideoFile)
+                self.downloadData(videoObj.localVideoFile)
             else:
                 print (f'Downloading video directory {self.localVideoDir}')
                 self.downloadData(self.localVideoDir)
@@ -521,6 +546,16 @@ class FileManager():
                     videoObj = self.returnVideoObject(videoIndex)
 
                     self.uploadData(videoObj.localVideoBBoxImagesDir)
+            if delete:
+                shutil.rmtree(self.localProjectDir)
+
+        elif dtype == 'ClipVideos':
+            if not no_upload:
+                for videoIndex in range(len(self.lp.novies)):
+                    videoObj = self.returnVideoObject(videoIndex)
+
+                    self.uploadData(videoObj.localVideoClipsDir)
+
             if delete:
                 shutil.rmtree(self.localProjectDir)
 

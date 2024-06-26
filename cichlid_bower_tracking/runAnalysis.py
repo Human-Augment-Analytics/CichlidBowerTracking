@@ -13,6 +13,7 @@ parser.add_argument('AnalysisType', type=str, choices=['Prep', 'Depth', 'Cluster
 parser.add_argument('AnalysisID', type = str, help = 'ID of analysis state name')
 parser.add_argument('--ProjectIDs', type=str, nargs='+', help='Optional name of projectIDs to restrict the analysis to')
 parser.add_argument('--Workers', type=int, help='Number of workers')
+parser.add_argument('--VideoIndex', type=int, help='The index of the video to be analyzed.')
 parser.add_argument('--FPC', type=int, help='Indicates the number of frames per clip; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Dim', type=int, help='Indicates the dimension that should be used in resizing collected bbox images; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Debug', type=bool, help='Runs the analysis with debug modes on')
@@ -45,12 +46,20 @@ else:
 uploadProcesses = [] # Keep track of all of the processes still uploading so we don't quit before they finish
 
 print('Downloading: ' + projectIDs[0] + ' ' + str(datetime.datetime.now()), flush = True)
-subprocess.run(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
+# subprocess.run(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
+command = ['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]]
+if args.VideoIndex is not None:
+    command += ['--VideoIndex', f'{args.VideoIndex}']
+
+subprocess.run(command)
+
 while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
     # dynamically construct command
     command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID]
+    if args.VideoIndex is not None:
+        command += ['--VideoIndex', f'{args.VideoIndex}']
     if args.FPC is not None:
         command += ['--FPC', f'{args.FPC}']
     if args.Dim is not None:
@@ -62,10 +71,14 @@ while len(projectIDs) != 0:
     print('Running: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
     p1 = subprocess.Popen(command)
 
-    # Download data for the next project in the background
+    # Download data for the next project in the background    
     if len(projectIDs) != 0:
+        command = ['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]]
+        if args.VideoIndex is not None:
+            command += ['--VideoIndex', f'{args.VideoIndex}']
+
         print('Downloading: ' + projectIDs[0] + ' ' + str(datetime.datetime.now()), flush = True)
-        p2 = subprocess.Popen(['python3', '-m', 'unit_scripts.download_data', args.AnalysisType, args.AnalysisID, projectIDs[0]])
+        p2 = subprocess.Popen(command)
 
     # Pause script until current analysis is complete and data for next project is downloaded
     p1.communicate()
