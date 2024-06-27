@@ -78,3 +78,20 @@ class SiameseAutoencoder(nn.Module):
         z = self.encoder(x)
 
         return z
+    
+    def reconstruct(self, z: torch.Tensor) -> torch.Tensor:
+        '''
+        Performs reconstruction by passing the input embedding through the decoder to obtain an image reconstruction.
+
+        Inputs:
+            z: a PyTorch tensor representing a batch of feature embeddings, each created by the encoder.
+
+        Returns:
+            x_reconstruction: the image reconstructed using the feature embedding z.
+        '''
+
+        assert z.shape == (self.batch_size, self.features)
+
+        x_reconstruction = self.decoder(z)
+
+        return x_reconstruction
