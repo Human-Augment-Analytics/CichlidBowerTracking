@@ -5,7 +5,7 @@ import pandas as pd
 from misc.pace_vars import USING_PACE
 
 class FileManager():
-    def __init__(self, analysisID = 'MC_multi', projectID = None, rcloneRemote = 'CichlidPiData:', masterDir = 'BioSci-McGrath/Apps/CichlidPiData/', check = False):
+    def __init__(self, analysisID = 'MC_multi', projectID = None, rcloneRemote = 'CichlidPiData:', masterDir = '/CoS/BioSci/BioSci-McGrath/Apps/CichlidPiData/', check = False):
         # Identify directory for temporary local files
         if platform.node() == 'raspberrypi' or 'Pi' in platform.node() or 'bt-' in platform.node() or 'sv-' in platform.node():
             self._identifyPiDirectory()
@@ -28,7 +28,7 @@ class FileManager():
                 self.cloudMasterDir = self.rcloneRemote + 'BioSci-' + masterDir
             else:
                 self.cloudMasterDir = self.rcloneRemote + masterDir
-                #raise Exception('Cant find master directory (' + masterDir + ') in rclone remote (' + rcloneRemote + '')
+                raise Exception('Cant find master directory (' + masterDir + ') in rclone remote (' + rcloneRemote + '')
 
         # Store analysis state information
         self.analysisID = analysisID
