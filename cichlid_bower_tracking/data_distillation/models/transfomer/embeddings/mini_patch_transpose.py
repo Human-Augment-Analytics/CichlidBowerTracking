@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Union
 
 import torch.nn as nn
 import torch
 
 class MiniPatchTranspose(nn.Module):
-    def __init__(self, embed_dim: int, before_stack_dim: int, batch_size: int, n_patches: int, out_channels=3, out_dim=256, kernel_size=3, stride=2, output_paddings: List[int]=None, ratio=8.0, ratio_growth=2.0, n_deconvs=5):
+    def __init__(self, embed_dim: int, before_stack_dim: int, batch_size: int, n_patches: int, out_channels=3, out_dim=256, kernel_size=3, stride=2, output_paddings: Union[List[int], None]=[0, 0, 0, 1], ratio=8.0, ratio_growth=2.0, n_deconvs=5):
         '''
         Initializes an instance of the MiniBatchTranspose class.
 
@@ -25,7 +25,10 @@ class MiniPatchTranspose(nn.Module):
         
         super(MiniPatchTranspose, self).__init__()
 
-        self.__version__ = '0.1.0'
+        if output_paddings is not None:
+            assert len(output_paddings) == n_deconvs - 1
+
+        self.__version__ = '0.1.1'
 
         self.embed_dim = embed_dim
         self.before_stack_dim = before_stack_dim
