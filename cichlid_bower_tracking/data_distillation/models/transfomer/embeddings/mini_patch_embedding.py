@@ -1,10 +1,12 @@
 import torch.nn as nn
 import torch
 
+import math
+
 class MiniPatchEmbedding(nn.Module):
-    def __init__(self, embed_dim: int, batch_size: int, in_channels=3, in_dim=256, kernel_size=3, stride=2, ratio=8.0, ratio_decay=0.5, n_convs=5,):
+    def __init__(self, embed_dim: int, batch_size: int, in_channels=3, in_dim=256, kernel_size=3, stride=2, ratio=8.0, ratio_decay=0.5, n_convs=5):
         '''
-        Initializes an instance of the MiniPatchEmbedding class.
+        Initializes an instance of the MiniPatchEmbedding class. Inspired by 'Early Convolutions Help Transformers See Better' by Xiao et al. (2021).
 
         Inputs:
             essentially the number of output channels of the patch embedding comvolution.
@@ -20,7 +22,7 @@ class MiniPatchEmbedding(nn.Module):
         
         super(MiniPatchEmbedding, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.embed_dim = embed_dim
         self.batch_size = batch_size
@@ -32,6 +34,7 @@ class MiniPatchEmbedding(nn.Module):
         self.ratio_decay = ratio_decay
         self.n_convs = n_convs
 
+        self.npatches, init_dim = 0, self.in_dim
         self.conv_stack, init_channels = [], self.in_channels
         for _ in range(self.n_convs - 1):
             conv_i = nn.Conv2d(in_channels=init_channels, out_channels=int(init_channels * self.ratio), kernel_size=self.kernel_size, stride=self.stride)
@@ -40,10 +43,15 @@ class MiniPatchEmbedding(nn.Module):
 
             self.conv_stack += [conv_i, b_norm_i, relu_i]
 
+            init_dim = int(((init_dim - self.kernel_size) // self.stride) + 1)
+            self.npatches = math.pow(init_dim, 2)
+
             init_channels = int(init_channels * self.ratio)
             self.ratio *= self.ratio_decay
 
-        self.final_conv = nn.Conv2d(in_channels=int(init_channels * (self.ratio / self.ratio_decay)), out_channels=self.embed_dim, kernel_size=1, stride=1)
+        self.after_stack_dim = int(init_channels * (self.ratio / self.ratio_decay))
+
+        self.final_conv = nn.Conv2d(in_channels=self.after_stack_dim, out_channels=self.embed_dim, kernel_size=1, stride=1)
         self.flatten = nn.Flatten(start_dim=2)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -59,7 +67,7 @@ class MiniPatchEmbedding(nn.Module):
 
         assert x.shape == (self.batch_size, self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
 
-        out = self.seq[0](x)
+        out = self.conv_stack[0](x)
         for i in range(1, len(self.seq)):
             out = self.conv_stack[i](out)
 
@@ -68,7 +76,5 @@ class MiniPatchEmbedding(nn.Module):
 
         out = self.flatten(out) # shape (N, C_embed, D_out * D_out)
         out = torch.transpose(out, dim0=1, dim1=2) # shape (N, D_out * D_out, C_embed)
-
-        self.n_patches = out.shape[1]
 
         return out

@@ -7,15 +7,18 @@ class PositonalEncoding(nn.Module):
         Initializes an instance of the PositionalEncoding class.
 
         Inputs:
-            embed_dim: essentially the number of output channels of the patch embedding comvolution.
+            embed_dim: the embedding dimension of the input and output.
             n_patches: an int value representing the total number of patches in the passed embedding.
         '''
+        
         super(PositonalEncoding, self).__init__()
+
+        self.__version__ = '0.1.0'
 
         self.embed_dim = embed_dim
         self.n_patches = n_patches
 
-        self.pos_embedding = nn.Parameter(torch.zeros(1, self.n_patches, self.n_patches))
+        self.pos_embedding = nn.Parameter(torch.zeros(1, self.n_patches, self.embed_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''

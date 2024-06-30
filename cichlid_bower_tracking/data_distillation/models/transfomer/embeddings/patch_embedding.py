@@ -18,7 +18,7 @@ class PatchEmbedding(nn.Module):
         
         super(PatchEmbedding, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.batch_size = batch_size
         self.in_channels = in_channels
@@ -28,6 +28,8 @@ class PatchEmbedding(nn.Module):
 
         self.patch_conv = nn.Conv2d(in_channels=self.in_channels, out_channels=self.embed_dim, kernel_size=self.patch_dim, stride=self.patch_dim)
         self.flatten = nn.Flatten(start_dim=2)
+
+        self.npatches = int(math.pow(self.in_dim // self.patch_dim, 2))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
@@ -43,12 +45,7 @@ class PatchEmbedding(nn.Module):
         assert x.shape == (self.batch_size, self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
 
         out = self.patch_conv(x) # shape (N, C_embed, D_out, D_out)
-
-        self.out_dim = out.shape[-1]
-
         out = self.flatten(out) # shape (N, C_embed, D_out * D_out)
         out = torch.transpose(out, dim0=1, dim1=2) # shape (N, D_out * D_out, C_embed)
-
-        self.npatches = out.shape[1]
         
         return out
