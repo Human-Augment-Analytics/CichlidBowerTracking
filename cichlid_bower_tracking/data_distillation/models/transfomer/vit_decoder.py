@@ -1,3 +1,5 @@
+from typing import Union
+
 from embeddings.patch_transpose import PatchTranspose
 from embeddings.mini_patch_transpose import MiniPatchTranspose
 from transformer_encoder import TransformerEncoder
@@ -6,7 +8,7 @@ import torch.nn as nn
 import torch
 
 class ViTDecoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, transposer: nn.Module, n_decoders=8, p_dropout=0.1, mlp_ratio=4.0):
+    def __init__(self, embed_dim: int, n_heads: int, transposer: Union[PatchTranspose, MiniPatchTranspose], n_decoders=8, p_dropout=0.1, mlp_ratio=4.0):
         '''
         Initializes an instance of the ViTDecoder class.
 

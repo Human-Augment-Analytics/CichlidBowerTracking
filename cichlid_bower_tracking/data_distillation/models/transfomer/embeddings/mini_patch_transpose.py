@@ -1,23 +1,22 @@
-from typing import List, Union
+from typing import List
 
 import torch.nn as nn
 import torch
 
 class MiniPatchTranspose(nn.Module):
-    def __init__(self, embed_dim: int, before_stack_dim: int, batch_size: int, n_patches: int, out_channels=3, out_dim=256, kernel_size=3, stride=2, output_paddings: Union[List[int], None]=[0, 0, 0, 1], ratio=8.0, ratio_growth=2.0, n_deconvs=5):
+    def __init__(self, embed_dim: int, patcher_dims_list: List[int], patcher_intermediate_channels: int, n_patches: int, batch_size: int, out_channels=3, out_dim=256, kernel_size=3, stride=2, ratio=1.0, ratio_growth=2.0, n_deconvs=5):
         '''
         Initializes an instance of the MiniBatchTranspose class.
 
         Inputs:
             embed_dim: essentially the number of channels in the input.
-            before_stack_dim: the number of channels produced by the MiniPatchEmbedding's convolutional stack, before being passed through the final convolution.
-            batch_size: the number of embeddings in the input Tensor.
+            patcher_dims_list: the value of the used MiniPatchEmbedding's dims_list instance variable, reversed.
+            patcher_intermediate_channels: the value of the used MiniPatchEmbedding's intermediate_channels instance variable.
             n_patches: the value of the MiniPatchEmbedding's npatches instance variable. 
-            out_channels: the number of channels in the reconstructed image (1 for greyscale, 3 for RGB); defaults to 3.
+            batch_size: the number of embeddings in the input Tensor.            out_channels: the number of channels in the reconstructed image (1 for greyscale, 3 for RGB); defaults to 3.
             out_dim: the dimension of the reconstructed image; defaults to 256.
             kernel_size: the dimension of the kernel used in the deconvolutional stack; defaults to 3.
             stride: the stride used in the deconvolutional stack; defaults to 2.
-            output_paddings: a list containing the output_paddings for each deconvolution in the main deconvolutional stack, used in matching to the desired out_dim; defaults to None.
             ratio: the channel multiplier used during the deconvolutional stack; defaults to 8.0.
             ratio_growth: the rate at which the ratio (channel multiplier) increases throughout the deconvolutional stack; defaults to 2.0.
             n_deconvs: the number of deconvolutions to be used (including the initial stride-one 1x1 deconvolution); defaults to 5.
@@ -25,40 +24,39 @@ class MiniPatchTranspose(nn.Module):
         
         super(MiniPatchTranspose, self).__init__()
 
-        if output_paddings is not None:
-            assert len(output_paddings) == n_deconvs - 1
-
         self.__version__ = '0.1.1'
 
         self.embed_dim = embed_dim
-        self.before_stack_dim = before_stack_dim
-        self.batch_size = batch_size
+        self.rev_patcher_dims_list = patcher_dims_list[::-1]
+        self.patcher_intermediate_channels = patcher_intermediate_channels
         self.npatches = n_patches
+        self.batch_size = batch_size
         self.out_channels = out_channels
         self.out_dim = out_dim
         self.kernel_size = kernel_size
         self.stride = stride
-        self.output_paddings = output_paddings
         self.ratio = ratio
         self.ratio_growth = ratio_growth
         self.n_deconvs = n_deconvs
 
-        self.unflatten = nn.Unflatten(1, (self.out_channels, self.in_dim, self.in_dim))
-        self.init_deconv = nn.ConvTranspose2d(in_channels=self.embed_dim, out_channels=self.before_stack_dim, kernel_size=1, stride=1)
+        self.unflatten = nn.Unflatten(1, (self.out_channels, self.rev_patcher_dims_list[0], self.rev_patcher_dims_list[0]))
+        self.init_deconv = nn.ConvTranspose2d(in_channels=self.embed_dim, out_channels=self.patcher_intermediate_channels, kernel_size=1, stride=1)
 
-        self.deconv_stack, init_channels = [], self.before_stack_dim
+        self.deconv_stack, init_channels, init_dim = [], self.patcher_intermediate_channels, self.rev_patcher_dims_list[0]
         for i in range(self.n_deconvs - 1):
-            kernel_size_i = self.kernel_size
-            stride_i = self.stride
-            output_padding_i = 0 if self.output_paddings is None else self.output_paddings[i]
+            tgt_dim_i = self.rev_patcher_dims_list[i + 1]
+            act_dim_i = (init_dim - 1) * self.stride + 1 * (self.kernel_size - 1) + 1
+            output_padding_i = act_dim_i - tgt_dim_i
 
             b_norm_i = nn.BatchNorm2d(num_features=int(init_channels * ratio))
-            deconv_i = nn.ConvTranspose2d(in_channels=init_channels, out_channels=int(init_channels * ratio), kernel_size=kernel_size_i, stride=stride_i, output_padding=output_padding_i)
+            deconv_i = nn.ConvTranspose2d(in_channels=init_channels, out_channels=int(init_channels * ratio), kernel_size=self.kernel_size, stride=self.stride, output_padding=output_padding_i)
 
             self.deconv_stack += [b_norm_i, deconv_i]
 
             init_channels = int(init_channels * self.ratio)
             self.ratio *= self.ratio_growth
+
+            init_dim = act_dim_i + output_padding_i
 
         self.sigmoid = nn.Sigmoid()
 

@@ -34,8 +34,8 @@ class MiniPatchEmbedding(nn.Module):
         self.ratio_decay = ratio_decay
         self.n_convs = n_convs
 
-        self.npatches, init_dim = 0, self.in_dim
-        self.conv_stack, init_channels = [], self.in_channels
+        self.npatches, init_dim, init_channels = 0, self.in_dim, self.in_channels
+        self.conv_stack, self.dims_list = [], [init_dim]
         for _ in range(self.n_convs - 1):
             conv_i = nn.Conv2d(in_channels=init_channels, out_channels=int(init_channels * self.ratio), kernel_size=self.kernel_size, stride=self.stride)
             b_norm_i = nn.BatchNorm2d(num_features=int(init_channels * self.ratio))
@@ -44,12 +44,14 @@ class MiniPatchEmbedding(nn.Module):
             self.conv_stack += [conv_i, b_norm_i, relu_i]
 
             init_dim = int(((init_dim - self.kernel_size) // self.stride) + 1)
+            
+            self.dims_list.append(init_dim)
             self.npatches = math.pow(init_dim, 2)
 
             init_channels = int(init_channels * self.ratio)
             self.ratio *= self.ratio_decay
 
-        self.after_stack_dim = int(init_channels * (self.ratio / self.ratio_decay))
+        self.intermediate_channels = init_channels
 
         self.final_conv = nn.Conv2d(in_channels=self.after_stack_dim, out_channels=self.embed_dim, kernel_size=1, stride=1)
         self.flatten = nn.Flatten(start_dim=2)

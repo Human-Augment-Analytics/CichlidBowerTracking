@@ -1,3 +1,5 @@
+from typing import Union
+
 from embeddings.patch_embedding import PatchEmbedding
 from embeddings.mini_patch_embedding import MiniPatchEmbedding
 from embeddings.positional_encoding import PositonalEncoding
@@ -7,7 +9,7 @@ import torch.nn as nn
 import torch
 
 class ViTEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, patcher: nn.Module, n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
+    def __init__(self, embed_dim: int, n_heads: int, patcher: Union[PatchEmbedding, MiniPatchEmbedding], n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
         '''
         Initializes an instance of the ViTEncoder class.
 
