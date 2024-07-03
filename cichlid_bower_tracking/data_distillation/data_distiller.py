@@ -1,11 +1,20 @@
-from typing import Tuple
+from typing import Tuple, Union
 import copy
 
-from models.siamese_autoencoder import SiameseAutoencoder
-from losses.siamese_loss import SiameseLoss
+from models.convolutional.siamese_autoencoder import SiameseAutoencoder
+from models.convolutional.triplet_autoencoder import TripletAutoencoder
 
-from data_distillation.misc.epoch_tracker import EpochTracker
-from data_distillation.misc.epoch_logger import EpochLogger
+from models.transformer.siamese_vit_autoencoder import SiameseViTAutoencoder
+from models.transformer.triplet_vit_autoencoder import TripletViTAutoencoder
+
+from losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss
+from losses.triplet_losses.total_triplet_loss import TotalTripletLoss
+
+from misc.epoch_tracker import EpochTracker
+from misc.epoch_logger import EpochLogger
+
+from testing.data.pairs import Pairs
+from testing.data.triplets import Triplets
 
 from torch.utils.data import DataLoader
 import torch.optim as optim
@@ -13,12 +22,13 @@ import torch.nn as nn
 import torch
 
 class DataDistiller:
-    def __init__(self, dataloader: DataLoader, model: nn.Module, loss_fn: nn.Module, optimizer: optim.Optimizer, nepochs: int, save_best_weights: bool, save_fp: str, device: str):
+    def __init__(self, dataloader: DataLoader, model: Union[SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], loss_fn: Union[TotalSiameseLoss, TotalTripletLoss], \
+                 optimizer: optim.Optimizer, nepochs: int, save_best_weights: bool, save_fp: str, device: str):
         '''
         Initializes an instance of the DataDistiller class.
 
         Inputs:
-            dataloader: a PyTorch dataloader containing pairs of bbox images collected by the BBoxCollector, as well as associated similarity labels for each pair.
+            dataloader: a PyTorch dataloader containing the data necessary for training/validation.
             model: a PyTorch model to be trained/validated and used in distilling the data in the passed dataloader.
             loss_fn: a PyTorch module representing the loss function to be used in evaluating the passed model during training/validation.
             optimizer: a PyTorch Optimizer to be used in updating the passed model's weights during training.
@@ -28,12 +38,15 @@ class DataDistiller:
             device: a string indicating the device on which training/validation and distillation will occur (should be either "cpu" or "gpu").
         '''
         
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.2.1'
 
         self.dataloader = dataloader
         self.model = model
         self.loss_fn = loss_fn
         self.optimizer = optimizer
+
+        self.use_pairwise_data = isinstance(self.dataloader.dataset, Pairs)
+        self.use_triplet_data = isinstance(self.dataloader.dataset, Triplets)
 
         self.train_logger = EpochLogger(value_type='Training Loss')
         self.valid_logger = EpochLogger(value_type='Validation Loss')
@@ -60,42 +73,83 @@ class DataDistiller:
         # get the total number of batches in the dataloader for more informative print messages.
         nbatches = len(self.dataloader)
 
-        # loop over dataloader to perform training
-        epoch_tracker = EpochTracker()
-        for batch, (x1, x2, y) in enumerate(self.dataloader):
-            # move to CUDA if requested (and able)
-            if self.device == 'gpu' and torch.cuda.is_available():
-                x1 = x1.cuda()
-                x2 = x2.cuda()
-                y = y.cuda()
+        # condition on dataset type
+        if self.use_pairwise_data:
+            # loop over dataloader to perform training
+            epoch_tracker = EpochTracker()
+            for batch, (x1, x2, y) in enumerate(self.dataloader):
+                # move to CUDA if requested (and able)
+                if self.device == 'gpu' and torch.cuda.is_available():
+                    x1 = x1.cuda()
+                    x2 = x2.cuda()
+                    y = y.cuda()
 
-            # depending on model type, expect different outputs from forward pass
-            if isinstance(self.model, SiameseAutoencoder):
-                z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
-            else: # if/when necessary, add more model types in elif-statements
-                raise Exception(f'Invalid model type: must be SiameseAutoencoder.')
+                # depending on model type, expect different outputs from forward pass
+                if isinstance(self.model, SiameseAutoencoder) or isinstance(self.model, SiameseViTAutoencoder):
+                    z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
+                else: # if/when necessary, add more model types in elif-statements
+                    raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
 
-            # calculate loss using passed loss_fn
-            if isinstance(self.loss_fn, SiameseLoss):
-                loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
-            else: # if/when necessary, add more loss functions in elif-statements
-                raise Exception(f'Invalid loss type: must be SiameseLoss.')
-            
-            # loss value tracking with EpochTracker
-            epoch_tracker.add(loss)
+                # calculate loss using passed loss_fn
+                if isinstance(self.loss_fn, TotalSiameseLoss):
+                    loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
+                else: # if/when necessary, add more loss functions in elif-statements
+                    raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+                
+                # loss value tracking with EpochTracker
+                epoch_tracker.add(loss)
 
-            # backward pass
-            loss.backward()
-            self.optimizer.step()
-            self.optimizer.zero_grad()
+                # backward pass
+                loss.backward()
+                self.optimizer.step()
+                self.optimizer.zero_grad()
 
-            # print statements
-            if batch % 10 == 0:
-                print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                      f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                # print statements
+                if batch % 10 == 0:
+                    print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
+                        f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
 
-        # return the epoch statistics as tracked by the EpochTracker 
-        return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+            # return the epoch statistics as tracked by the EpochTracker 
+            return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+        elif self.use_triplet_data:
+            # loop over dataloader to perform training
+            epoch_tracker = EpochTracker()
+            for batch, (anchor, positive, negative) in enumerate(self.dataloader):
+                # move to CUDA if requested (and able)
+                if self.device == 'gpu' and torch.cuda.is_available():
+                    anchor = anchor.cuda()
+                    positive = positive.cuda()
+                    negative = negative.cuda()
+                
+                # depending on model type, expect different outputs from forward pass
+                if isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
+                    z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(x1, x2)
+                else: # if/when necessary, add more model types in elif-statements
+                    raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
+
+                # calculate loss using passed loss_fn
+                if isinstance(self.loss_fn, TotalSiameseLoss):
+                    loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
+                else: # if/when necessary, add more loss functions in elif-statements
+                    raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+
+                # loss value tracking with EpochTracker
+                epoch_tracker.add(loss)
+
+                # backward pass
+                loss.backward()
+                self.optimizer.step()
+                self.optimizer.zero_grad()
+
+                # print statements
+                if batch % 10 == 0:
+                    print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
+                        f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+
+            # return the epoch statistics as tracked by the EpochTracker 
+            return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+        else:
+            raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
     def _validate(self, epoch: int) -> Tuple[float]:
         '''
@@ -120,39 +174,74 @@ class DataDistiller:
             # manually keep track of batch number while looping through dataloader
             batch = 0
 
-            # loop over dataloader to perform validation
-            for (x1, x2, y) in enumerate(self.dataloader):
-                # move to CUDA if requested (and able)
-                if self.device == 'gpu' and torch.cuda.is_available():
-                    x1 = x1.cuda()
-                    x2 = x2.cuda()
-                    y = y.cuda()
+            if self.use_pairwise_data:
+                # loop over dataloader to perform validation
+                for (x1, x2, y) in enumerate(self.dataloader):
+                    # move to CUDA if requested (and able)
+                    if self.device == 'gpu' and torch.cuda.is_available():
+                        x1 = x1.cuda()
+                        x2 = x2.cuda()
+                        y = y.cuda()
 
-                # depending on model type, expect different outputs from forward pass
-                if isinstance(self.model, SiameseAutoencoder):
-                    z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
-                else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be SiameseAutoencoder.')
-                
-                # calculate loss using passed loss_fn
-                if isinstance(self.loss_fn, SiameseLoss):
-                    loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
-                else: # if/when necessary, add more loss functions in elif-statements
-                    raise Exception(f'Invalid loss type: must be SiameseLoss.')
-                
-                # loss value tracking with EpochTracker
-                epoch_tracker.add(loss)
+                    # depending on model type, expect different outputs from forward pass
+                    if isinstance(self.model, SiameseAutoencoder):
+                        z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
+                    else: # if/when necessary, add more model types in elif-statements
+                        raise Exception(f'Invalid model type: must be SiameseAutoencoder.')
+                    
+                    # calculate loss using passed loss_fn
+                    if isinstance(self.loss_fn, TotalSiameseLoss):
+                        loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
+                    else: # if/when necessary, add more loss functions in elif-statements
+                        raise Exception(f'Invalid loss type: must be SiameseLoss.')
+                    
+                    # loss value tracking with EpochTracker
+                    epoch_tracker.add(loss)
 
-                # print statements
-                if batch % 10 == 0:
-                    print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                          f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                    # print statements
+                    if batch % 10 == 0:
+                        print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
+                            f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
 
-                # increment manual batch count    
-                batch += 1
+                    # increment manual batch count    
+                    batch += 1
 
-        # return the epoch statistics as tracked by the EpochTracker             
-        return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+                # return the epoch statistics as tracked by the EpochTracker             
+                return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+            elif self.use_triplet_data:
+                # loop over dataloader to perform training
+                epoch_tracker = EpochTracker()
+                for (anchor, positive, negative) in enumerate(self.dataloader):
+                    # move to CUDA if requested (and able)
+                    if self.device == 'gpu' and torch.cuda.is_available():
+                        anchor = anchor.cuda()
+                        positive = positive.cuda()
+                        negative = negative.cuda()
+                    
+                    # depending on model type, expect different outputs from forward pass
+                    if isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
+                        z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(x1, x2)
+                    else: # if/when necessary, add more model types in elif-statements
+                        raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
+
+                    # calculate loss using passed loss_fn
+                    if isinstance(self.loss_fn, TotalSiameseLoss):
+                        loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
+                    else: # if/when necessary, add more loss functions in elif-statements
+                        raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+
+                    # loss value tracking with EpochTracker
+                    epoch_tracker.add(loss)
+
+                    # print statements
+                    if batch % 10 == 0:
+                        print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
+                            f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+
+                # return the epoch statistics as tracked by the EpochTracker 
+                return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+            else:
+                raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
     def _main_loop(self) -> nn.Module:
         '''

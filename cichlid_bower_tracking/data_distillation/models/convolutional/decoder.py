@@ -2,13 +2,13 @@ import torch.nn as nn
 import torch
 
 class Decoder(nn.Module):
-    def __init__(self, features: int, batch_size=32, img_channels=3, img_dim=128):
+    def __init__(self, features: int, batch_size=16, img_channels=3, img_dim=256):
         '''
         Initializes an instance of the Decoder PyTorch module of the SiameseAutoencoder.
 
         Inputs:
             features: an integer indicating the number of features to which the input should be compressed by the encoder.
-            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 32.
+            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16.
             img_channels: an integer indicating the number of channels in the input images; defaults to 3 (assumes RGB over greyscale).
             img_dim: an integer indicating the input images' shared height and width; defaults to 128.
         '''
@@ -24,8 +24,8 @@ class Decoder(nn.Module):
         self.out_dim = img_dim
 
         self.fc = nn.Sequential(
-            nn.Linear(in_features=self.in_features, out_features=256 * 32 * 32),
-            nn.Unflatten(1, (256, 32, 32))
+            nn.Linear(in_features=self.in_features, out_features=256 * 64 * 64),
+            nn.Unflatten(1, (256, 64, 64))
         )
 
         self.deconv_2 = nn.sequential(

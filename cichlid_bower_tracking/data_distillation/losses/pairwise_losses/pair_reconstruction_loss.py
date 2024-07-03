@@ -1,18 +1,18 @@
 import torch.nn as nn
 import torch
 
-class PairLoss(nn.Module):
+class PairReconstructionLoss(nn.Module):
     def __init__(self, criterion: nn.Module):
         '''
-        Initializes an instance of the PairLoss PyTorch module.
+        Initializes an instance of the PairReconstructionLoss PyTorch module.
 
         Inputs:
             criterion: a PyTorch module representing the reconstructive loss to be used in evaluating the image reconstructions.
         '''
 
-        super(PairLoss, self).__init__()
+        super(PairReconstructionLoss, self).__init__()
         
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.2.0'
 
         self.criterion = criterion
 
@@ -33,6 +33,6 @@ class PairLoss(nn.Module):
         loss1 = self.criterion(x1_reconstruction, x1)
         loss2 = self.criterion(x2_reconstruction, x2)
 
-        pair_loss = loss1 + loss2
+        pair_reconstruction_loss = loss1 + loss2
 
-        return pair_loss
+        return pair_reconstruction_loss

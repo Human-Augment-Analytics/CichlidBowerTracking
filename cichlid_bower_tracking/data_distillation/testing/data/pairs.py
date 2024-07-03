@@ -4,24 +4,25 @@ import pandas as pd
 from torch.utils.data.dataset import Dataset
 from torchvision.io import read_image
 
-class CichlidPairs(Dataset):
+class Pairs(Dataset):
     def __init__(self, df: pd.DataFrame, transform=None):
         '''
-        Initializes an instance of the CichlidPairs PyTorch Dataset.
+        Initializes an instance of the Pairs PyTorch Dataset.
 
         Inputs:
-            df: a pandas DataFrame containing pairs of bbox image filepaths and the associated similarity labels.
-            transform: a set of PyTorch transforms to be performed on every bbox image.
+            df: a pandas DataFrame containing pairs of image filepaths and the associated similarity labels.
+            transform: a set of PyTorch transforms to be performed on every image.
         '''
+        super(Pairs, self).__init__()
 
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.3'
 
         self.df = df
         self.transform = transform
 
     def __len__(self) -> int:
         '''
-        Gets the number of bbox image pairs and associated similarity labels in the Dataset.
+        Gets the number of image pairs and associated similarity labels in the Dataset.
 
         Inputs: None.
 
@@ -32,10 +33,10 @@ class CichlidPairs(Dataset):
 
     def __getitem__(self, index: int) -> Tuple:
         '''
-        Obtains the bbox image pair and associated similarity label stored at the passed index in self.df, then transforms the images (assuming self.transform is not None) and returns the transformed images and associated similarity label.
+        Obtains the image pair and associated similarity label stored at the passed index in self.df, then transforms the images (assuming self.transform is not None) and returns the transformed images and associated similarity label.
 
         Inputs:
-            index: an integer index to be used in obtaining a bbox image pair and associated similarity label.
+            index: an integer index to be used in obtaining an image pair and associated similarity label.
 
         Returns:
             x1: the first bbox image in the pair at the passed index.

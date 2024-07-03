@@ -2,13 +2,13 @@ import torch.nn as nn
 import torch
 
 class Encoder(nn.Module):
-    def __init__(self, features: int, batch_size=32, img_channels=3, img_dim=128, p_dropout=0.5):
+    def __init__(self, features: int, batch_size=16, img_channels=3, img_dim=256, p_dropout=0.5):
         '''
         Initializes an instance of the Encoder PyTorch module of the SiameseAutoencoder.
 
         Inputs:
             features: an integer indicating the number of features to which the input should be compressed by the encoder.
-            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 32.
+            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16.
             img_channels: an integer indicating the number of channels in the input images; defaults to 3 (assumes RGB over greyscale).
             img_dim: an integer indicating the input images' shared height and width; defaults to 128.
             p_dropout: a float indicating what probability should be used in the dropout layer; defaults to 0.5, should be in the interval (0, 1).
@@ -41,7 +41,7 @@ class Encoder(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(in_features=256 * 32 * 32, out_features=self.out_features),
+            nn.Linear(in_features=256 * 64 * 64, out_features=self.out_features),
             nn.Dropout(p=self.p_dropout)
         )
 
