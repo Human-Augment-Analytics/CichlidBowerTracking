@@ -8,14 +8,14 @@ class Decoder(nn.Module):
 
         Inputs:
             features: an integer indicating the number of features to which the input should be compressed by the encoder.
-            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16.
+            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             img_channels: an integer indicating the number of channels in the input images; defaults to 3 (assumes RGB over greyscale).
             img_dim: an integer indicating the input images' shared height and width; defaults to 128.
         '''
 
         super(Decoder, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.2'
 
         self.in_features = features
 
@@ -52,7 +52,8 @@ class Decoder(nn.Module):
             x_reconstruction: a PyTorch Tensor representing the batch of reconstructed images.
         '''
         
-        assert z.shape == (self.batch_size, self.in_features)
+        assert len(z.shape) == 2
+        assert z.shape[1:] == (self.in_features, )
 
         out = self.fc(z)
         out = self.deconv_2(out)

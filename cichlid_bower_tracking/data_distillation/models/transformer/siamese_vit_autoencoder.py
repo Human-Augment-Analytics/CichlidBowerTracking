@@ -13,7 +13,7 @@ import torch.nn as nn
 import torch
 
 class SiameseViTAutoencoder(nn.Module):
-    def __init__(self, embed_dim: int, n_encoder_heads: int, n_decoder_heads: int, n_encoders=8, n_decoders=8, encoder_dropout=0.1, decoder_dropout=0.1, encoder_mlp_ratio=4.0, decoder_mlp_ratio=4.0, batch_size=8, img_channels=3, img_dim=256, \
+    def __init__(self, embed_dim: int, n_encoder_heads: int, n_decoder_heads: int, n_encoders=8, n_decoders=8, encoder_dropout=0.1, decoder_dropout=0.1, encoder_mlp_ratio=4.0, decoder_mlp_ratio=4.0, batch_size=16, img_channels=3, img_dim=256, \
                  patcher_kernel_size=3, patcher_stride=2, patcher_ratio=8.0, patcher_ratio_decay=0.5, patcher_n_convs=5, use_minipatching=False, \
                  transposer_kernel_size=3, transposer_stride=2, transposer_ratio=1.0, transposer_ratio_growth=2.0, transposer_n_deconvs=5, \
                  patcher_dim=16):
@@ -30,7 +30,7 @@ class SiameseViTAutoencoder(nn.Module):
             decoder_dropout: the dropout probability to be used in the decoder; defaults to 0.1.
             encoder_mlp_ratio: the size of the hidden layer in the MLP used by the encoder, relative to the embed_dim; defaults to 4.0.
             decoder_mlp_ratio: the size of the hidden layer in the MLP used by the decoder, relative to the embed_dim; defaults to 4.0.
-            batch_size: the number of images per batch; defaults to 8.
+            batch_size: the number of images per batch; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             img_channels: the number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.
             img_dim: the size of each image (assumes square shape); defaults to 256.
             patcher_kernel_size: the kernel size to be used by a MiniPatchEmbedding; defaults to 3, no effect if use_minipatching == False.

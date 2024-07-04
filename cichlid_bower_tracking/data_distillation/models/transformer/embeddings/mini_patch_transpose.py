@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch
 
 class MiniPatchTranspose(nn.Module):
-    def __init__(self, embed_dim: int, patcher_dims_list: List[int], patcher_intermediate_channels: int, n_patches: int, batch_size: int, out_channels=3, out_dim=256, kernel_size=3, stride=2, ratio=1.0, ratio_growth=2.0, n_deconvs=5):
+    def __init__(self, embed_dim: int, patcher_dims_list: List[int], patcher_intermediate_channels: int, n_patches: int, batch_size=16, out_channels=3, out_dim=256, kernel_size=3, stride=2, ratio=1.0, ratio_growth=2.0, n_deconvs=5):
         '''
         Initializes an instance of the MiniBatchTranspose class.
 
@@ -13,7 +13,8 @@ class MiniPatchTranspose(nn.Module):
             patcher_dims_list: the value of the used MiniPatchEmbedding's dims_list instance variable, reversed.
             patcher_intermediate_channels: the value of the used MiniPatchEmbedding's intermediate_channels instance variable.
             n_patches: the value of the MiniPatchEmbedding's npatches instance variable. 
-            batch_size: the number of embeddings in the input Tensor.            out_channels: the number of channels in the reconstructed image (1 for greyscale, 3 for RGB); defaults to 3.
+            batch_size: the number of embeddings in the input Tensor; defaults to 16 [deprecated: has no effect on output, soon to be removed].
+            out_channels: the number of channels in the reconstructed image (1 for greyscale, 3 for RGB); defaults to 3.
             out_dim: the dimension of the reconstructed image; defaults to 256.
             kernel_size: the dimension of the kernel used in the deconvolutional stack; defaults to 3.
             stride: the stride used in the deconvolutional stack; defaults to 2.
@@ -24,7 +25,7 @@ class MiniPatchTranspose(nn.Module):
         
         super(MiniPatchTranspose, self).__init__()
 
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.3'
 
         self.embed_dim = embed_dim
         self.rev_patcher_dims_list = patcher_dims_list[::-1]
@@ -71,7 +72,8 @@ class MiniPatchTranspose(nn.Module):
             x_reconstruction: a PyTorch Tensor representing a batch of reconstructed images.    
         '''
         
-        assert z.shape == (self.batch_size, self.npatches, self.embed_dim) # shape (N, D_in * D_in, C_in)
+        assert len(z.shape) == 3
+        assert z.shape[:1] == (self.npatches, self.embed_dim) # shape (N, D_in * D_in, C_in)
 
         z = torch.transpose(z, dim0=1, dim1=2) # shape (N, C_embed, D_in * D_in)
         

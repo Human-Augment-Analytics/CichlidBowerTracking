@@ -4,13 +4,13 @@ import torch
 import math
 
 class PatchEmbedding(nn.Module):
-    def __init__(self, embed_dim: int, batch_size: int, in_channels=3, in_dim=256, patch_dim=16):
+    def __init__(self, embed_dim: int, batch_size=16, in_channels=3, in_dim=256, patch_dim=16):
         '''
         Initializes an instance of the PatchEmbedding class.
 
         Inputs:
             embed_dim: essentially the number of output channels of the patch embedding comvolution.
-            batch_size: the number of images per batch.
+            batch_size: the number of images per batch; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             in_channels: the number of channels in each input image (1 of greyscale, 3 if RGB); defaults to 3.
             in_dim: the dimension of each input image; defaults to 256.
             patch_dim: essentially the kernel size of the patch embedding convolution.
@@ -18,7 +18,7 @@ class PatchEmbedding(nn.Module):
         
         super(PatchEmbedding, self).__init__()
 
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.3'
 
         self.batch_size = batch_size
         self.in_channels = in_channels
@@ -42,7 +42,8 @@ class PatchEmbedding(nn.Module):
             out: the computed patch embeddings PyTorch Tensor.
         '''
 
-        assert x.shape == (self.batch_size, self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
+        assert len(x.shape) == 4 
+        assert x.shape[:1] == (self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
 
         out = self.patch_conv(x) # shape (N, C_embed, D_out, D_out)
         out = self.flatten(out) # shape (N, C_embed, D_out * D_out)

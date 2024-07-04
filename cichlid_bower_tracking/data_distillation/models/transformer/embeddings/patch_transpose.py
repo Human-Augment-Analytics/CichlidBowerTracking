@@ -2,13 +2,13 @@ import torch.nn as nn
 import torch
 
 class PatchTranspose(nn.Module):
-    def __init__(self, embed_dim: int, batch_size: int, n_patches: int, out_channels=3, out_dim=256, patch_dim=16):
+    def __init__(self, embed_dim: int, n_patches: int, batch_size=16, out_channels=3, out_dim=256, patch_dim=16):
         '''
         Initializes an instance of the PatchTranspose class.
 
         Inputs:
             embed_dim: essentially the number of channels in the input.
-            batch_size: the number of embeddings in the input Tensor.
+            batch_size: the number of embeddings in the input Tensor; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             n_patches: the value of the PatchEmbedding's npatches instance variable.
             out_channels: the number of channels in the reconstructed image (1 for greyscale, 3 for RGB); defaults to 3.
             out_dim: the dimension of the reconstructed image; defaults to 256.
@@ -17,7 +17,7 @@ class PatchTranspose(nn.Module):
         
         super(PatchTranspose, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.2'
 
         self.embed_dim = embed_dim
         self.batch_size = batch_size
@@ -41,7 +41,8 @@ class PatchTranspose(nn.Module):
             x_reconstruction: a PyTorch Tensor representing a batch of reconstructed images.    
         '''
 
-        assert z.shape == (self.batch_size, self.npatches, self.embed_dim) # shape (N, D_in * D_in, C_in)
+        assert len(z.shape) == 3
+        assert z.shape[:1] == (self.npatches, self.embed_dim) # shape (N, D_in * D_in, C_in)
 
         z = torch.transpose(z, dim0=1, dim1=2) # shape (N, C_embed, D_in * D_in)
 

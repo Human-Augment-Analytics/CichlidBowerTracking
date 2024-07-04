@@ -6,13 +6,13 @@ import torch.nn as nn
 import torch
 
 class SiameseAutoencoder(nn.Module):
-    def __init__(self, features: int, batch_size=32, img_channels=3, img_dim=128, encoder_dropout=0.5):
+    def __init__(self, features: int, batch_size=16, img_channels=3, img_dim=256, encoder_dropout=0.5):
         '''
         Initializes an instance of the SiameseAutoencoder PyTorch module.
 
         Inputs:
             features: an integer indicating the number of features to which the input should be compressed by the encoder.
-            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 32.
+            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 32 [deprecated: has no effect on output, soon to be removed].
             img_channels: an integer indicating the number of channels in the input images; defaults to 3 (assumes RGB over greyscale).
             img_dim: an integer indicating the input images' shared height and width; defaults to 128.
             encoder_dropout: a float indicating what probability should be used in the dropout layer of the encoder; defaults to 0.5, must be in the interval (0, 1).
@@ -20,7 +20,7 @@ class SiameseAutoencoder(nn.Module):
 
         super(SiameseAutoencoder, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.features = features
 

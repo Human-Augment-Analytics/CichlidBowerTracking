@@ -4,13 +4,13 @@ import torch
 import math
 
 class MiniPatchEmbedding(nn.Module):
-    def __init__(self, embed_dim: int, batch_size: int, in_channels=3, in_dim=256, kernel_size=3, stride=2, ratio=8.0, ratio_decay=0.5, n_convs=5):
+    def __init__(self, embed_dim: int, batch_size=16, in_channels=3, in_dim=256, kernel_size=3, stride=2, ratio=8.0, ratio_decay=0.5, n_convs=5):
         '''
         Initializes an instance of the MiniPatchEmbedding class. Inspired by 'Early Convolutions Help Transformers See Better' by Xiao et al. (2021).
 
         Inputs:
             essentially the number of output channels of the patch embedding comvolution.
-            batch_size: the number of images per batch.
+            batch_size: the number of images per batch; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             in_channels: the number of channels in each input image (1 of greyscale, 3 if RGB); defaults to 3.
             in_dim: the dimension of each input image; defaults to 256.
             kernel_size: the dimension of the kernel used in the convolutional stack; defaults to 3.
@@ -22,7 +22,7 @@ class MiniPatchEmbedding(nn.Module):
         
         super(MiniPatchEmbedding, self).__init__()
 
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.1.3'
 
         self.embed_dim = embed_dim
         self.batch_size = batch_size
@@ -67,7 +67,8 @@ class MiniPatchEmbedding(nn.Module):
             out: a PyTorch Tensor containing the "patch" embeddings of the input images.
         '''
 
-        assert x.shape == (self.batch_size, self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
+        assert len(x.shape) == 4
+        assert x.shape[:1] == (self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
 
         out = self.conv_stack[0](x)
         for i in range(1, len(self.seq)):

@@ -8,7 +8,7 @@ class Encoder(nn.Module):
 
         Inputs:
             features: an integer indicating the number of features to which the input should be compressed by the encoder.
-            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16.
+            batch_size: an integer indicating the number of images included in each batch during training and evaluation; defaults to 16 [deprecated: has no effect on output, soon to be removed].
             img_channels: an integer indicating the number of channels in the input images; defaults to 3 (assumes RGB over greyscale).
             img_dim: an integer indicating the input images' shared height and width; defaults to 128.
             p_dropout: a float indicating what probability should be used in the dropout layer; defaults to 0.5, should be in the interval (0, 1).
@@ -16,7 +16,7 @@ class Encoder(nn.Module):
 
         super(Encoder, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.2'
         
         self.out_features = features
         
@@ -56,7 +56,8 @@ class Encoder(nn.Module):
             z: a PyTorch Tensor containing the feature embeddings for each image in the passed batch.
         '''
 
-        assert x.shape == (self.batch_size, self.in_channels, self.in_dim, self.in_dim)
+        assert len(x.shape) == 4
+        assert x.shape[:1] == (self.in_channels, self.in_dim, self.in_dim)
 
         out = self.conv_1(x)
         out = self.conv_2(out)
