@@ -1,4 +1,4 @@
-from cichlid_bower_tracking.helper_modules.file_manager import FileManager as FM
+from helper_modules.file_manager import FileManager as FM
 import argparse, GPUtil, os, sys, subprocess, yaml, pdb
 
 # This code ensures that modules can be found in their relative directories
@@ -10,6 +10,7 @@ if PROJECT_ROOT not in sys.path:
 parser = argparse.ArgumentParser(description='This script is used to manually prepared projects for downstream analysis')
 parser.add_argument('AnalysisType', type=str, choices=['FishDetection','SexDetermination','SandManipulationClassification'], help='Type of analysis to run')
 parser.add_argument('AnalysisID', type = str, help = 'ID of analysis state name')
+parser.add_argument('--file', type=str, help='The relative filepath (from YOLOV5_Annotations/) of the specific dataset to be used in training')
 args = parser.parse_args()
 
 
@@ -24,10 +25,12 @@ if not fm_obj.checkFileExists(fm_obj.localSummaryFile):
 if args.AnalysisType == 'FishDetection':
 	
 	fm_obj.downloadData(fm_obj.localYolov5AnnotationsDir, tarred = True)
-	with open(fm_obj.localYolov5AnnotationsDir + 'dataset.yaml', 'r') as file:
+
+	dataset_file = fm_obj.localYolov5AnnotationsDir + ('dataset.yaml' if args.file is None else args.file)
+	with open(dataset_file, 'r') as file:
 		dataset = yaml.safe_load(file)
 	dataset['path'] = fm_obj.localYolov5AnnotationsDir
-	with open(fm_obj.localYolov5AnnotationsDir + 'dataset.yaml', 'w') as file:
+	with open(dataset_file, 'w') as file:
 		yaml.dump(dataset, file)
 
 	fm_obj.downloadData(fm_obj.localObjectDetectionDir + 'hyp.yaml')
@@ -40,7 +43,7 @@ if args.AnalysisType == 'FishDetection':
 	command.extend(['--batch-size','-1'])
 	command.extend(['--optimizer','AdamW'])
 	command.extend(['--hyp',fm_obj.localObjectDetectionDir + 'hyp.yaml'])
-	command.extend(['--data',fm_obj.localYolov5AnnotationsDir + 'dataset.yaml'])
+	command.extend(['--data',dataset_file])
 	command.extend(['--project', args.AnalysisType])
 	command.extend(['--name', args.AnalysisID])
 
