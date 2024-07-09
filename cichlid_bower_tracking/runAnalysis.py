@@ -17,6 +17,7 @@ parser.add_argument('--VideoIndex', type=int, help='The index of the video to be
 parser.add_argument('--FPC', type=int, help='Indicates the number of frames per clip; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Dim', type=int, help='Indicates the dimension that should be used in resizing collected bbox images; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Debug', type=bool, help='Runs the analysis with debug modes on')
+parser.add_argument('--Delete', default=False, action='store_true', help='Deletes the data after completing the analysis.')
 args = parser.parse_args()
 
 
@@ -98,7 +99,13 @@ while len(projectIDs) != 0:
     #Upload data and keep track of it
     print('Uploading: ' + projectID + ' ' + str(datetime.datetime.now()), flush = True)
     #uploadProcesses.append(subprocess.Popen(['python3', '-m', 'cichlid_bower_tracking.unit_scripts.upload_data', args.AnalysisType, args.AnalysisID, projectID]))
-    uploadProcesses.append(subprocess.Popen(['python3', '-m', 'unit_scripts.upload_data', args.AnalysisType, '--Delete', args.AnalysisID, projectID]))
+    
+    command = ['python3', '-m', 'unit_scripts.upload_data', args.AnalysisType]
+    if args.Delete:
+        command.extend(['--Delete'])
+    command.extend([args.AnalysisID, projectID])
+    
+    uploadProcesses.append(subprocess.Popen(command))
 
 for i,p in enumerate(uploadProcesses):
     print('Finishing uploading process ' + str(i) + ': ' + str(datetime.datetime.now()), flush = True)

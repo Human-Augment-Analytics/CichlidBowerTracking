@@ -37,7 +37,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 from filterpy.kalman import KalmanFilter
-import tarfile, pdb, argparse, os
+import tarfile, pdb, argparse, os, datetime
 
 np.random.seed(0)
 
@@ -73,6 +73,7 @@ def iou_batch(bb_test, bb_gt):
     wh = w * h
     o = wh / ((bb_test[..., 2] - bb_test[..., 0]) * (bb_test[..., 3] - bb_test[..., 1])
               + (bb_gt[..., 2] - bb_gt[..., 0]) * (bb_gt[..., 3] - bb_gt[..., 1]) - wh)
+        
     return (o)
 
 
@@ -205,16 +206,31 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     else:
         matched_indices = np.empty(shape=(0, 2))
 
+    init_num_matches = len(matched_indices)
+    print(f'{init_num_matches} initial matches :: {datetime.datetime.now()}')
+
     unmatched_detections = []
     for d, det in enumerate(detections):
         if (d not in matched_indices[:, 0]):
             unmatched_detections.append(d)
 
+    num_unmatched_detections = 0
+    if len(unmatched_detections) > 0:
+        num_unmatched_detections = len(unmatched_detections)
+        
+    print(f'{num_unmatched_detections} unmatched detections :: {datetime.datetime.now()}')
+    
     unmatched_trackers = []
     for t, trk in enumerate(trackers):
         if (t not in matched_indices[:, 1]):
             unmatched_trackers.append(t)
-    #if len(unmatched_trackers) > 0:
+    
+    num_unmatched_trackers = 0
+    if len(unmatched_trackers) > 0:
+        num_unmatched_trackers = len(unmatched_trackers)
+
+    print(f'{num_unmatched_trackers} unmatched trackers :: {datetime.datetime.now()}')
+
     #    pdb.set_trace()
 
     # filter out matched with low IOU
@@ -223,14 +239,23 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
         if (iou_matrix[m[0], m[1]] < iou_threshold):
             unmatched_detections.append(m[0])
             unmatched_trackers.append(m[1])
+
+            print(f'IoU {iou_matrix[m[0], m[1]]} filtered out :: {datetime.datetime.now()}')
         else:
             matches.append(m.reshape(1, 2))
+    
+    new_num_unmatched_detections = len(unmatched_detections)
+    new_num_unmatched_trackers = len(unmatched_trackers)
 
+    print(f'{new_num_unmatched_detections - num_unmatched_detections} more unmatched detections ({new_num_unmatched_detections} total) :: {datetime.datetime.now()}')
+    print(f'{new_num_unmatched_trackers - num_unmatched_trackers} more unmatched trackers ({new_num_unmatched_trackers} total) :: {datetime.datetime.now()}')
 
     if len(matches) == 0:
         matches = np.empty((0, 2), dtype=int)
     else:
         matches = np.concatenate(matches, axis=0)
+
+    print(f'{len(matches)} final matches :: {datetime.datetime.now()}')
 
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 

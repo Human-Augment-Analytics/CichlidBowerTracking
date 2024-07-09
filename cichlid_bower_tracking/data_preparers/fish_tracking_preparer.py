@@ -1,4 +1,4 @@
-import subprocess, os, pdb, datetime
+import subprocess, os, pdb, datetime, shutil
 from shapely.geometry import Point, Polygon
 
 class FishTrackingPreparer():
@@ -10,7 +10,7 @@ class FishTrackingPreparer():
 
 	def __init__(self, fileManager, videoIndex):
 
-		self.__version__ = '1.0.0'
+		self.__version__ = '1.0.1'
 		self.fileManager = fileManager
 		self.videoObj = self.fileManager.returnVideoObject(videoIndex)
 		self.videoIndex = videoIndex
@@ -19,6 +19,7 @@ class FishTrackingPreparer():
 	def validateInputData(self):
 		# print(f'detections file: {self.videoObj.localFishDetectionsFile}')
 		# print(f'tracks file: {self.videoObj.localFishTracksFile}')
+
 
 		assert os.path.exists(self.videoObj.localVideoFile)
 
@@ -30,9 +31,11 @@ class FishTrackingPreparer():
 
 	def runObjectDetectionAnalysis(self, gpu = 0):
 
-
 		print('Running Object detection on ' + self.videoObj.baseName + ' ' + str(datetime.datetime.now()), flush = True)
 		self.annotations_dir = self.fileManager.localTempDir + self.videoObj.localVideoFile.split('/')[-1].replace('.mp4','')
+
+		if os.path.exists(self.annotations_dir + '/exp/labels/'):
+			shutil.rmtree(self.annotations_dir + '/exp/labels/')
 
 		command = ['python3', 'detect.py']
 		command.extend(['--weights', self.fileManager.localYolov5WeightsFile])
@@ -56,7 +59,7 @@ class FishTrackingPreparer():
 
 		os.chdir(os.getenv('HOME') + '/yolov5')
 		print('bash -c \"' + command + '\"')
-		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_detectionerrors.txt', 'w'), stdout=subprocess.DEVNULL)
+		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_detectionerrors.txt', 'w'), stdout=open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_detectionstdout.txt', 'w'))
 		#os.chdir(os.getenv('HOME') + '/CichlidBowerTracking/cichlid_bower_tracking')
 		return output
 
@@ -81,7 +84,7 @@ class FishTrackingPreparer():
 		command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidSort; " + ' '.join(command)
 		#subprocess.run('bash -c \"' + command + '\"', shell = True)
 
-		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingerrors.txt', 'w'), stdout=subprocess.DEVNULL)
+		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingerrors.txt', 'w'), stdout=open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingstdout.txt', 'w'))
 		return output
 
 
