@@ -46,7 +46,7 @@ class MiniPatchEmbedding(nn.Module):
             init_dim = int(((init_dim - self.kernel_size) // self.stride) + 1)
             
             self.dims_list.append(init_dim)
-            self.npatches = math.pow(init_dim, 2)
+            self.npatches = int(math.pow(init_dim, 2))
 
             init_channels = int(init_channels * self.ratio)
             self.ratio *= self.ratio_decay

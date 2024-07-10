@@ -64,11 +64,31 @@ class TripletAutoencoder(nn.Module):
         return z_anchor, z_positive, z_negative, anchor_reconstruction, positive_representation, negative_representation
     
     def distill(self, x: torch.Tensor) -> torch.Tensor:
+        '''
+        Given input image(s), peforms distillation and returns embedding(s).
+
+        Inputs:
+            x: a PyTorch Tensor representing image(s).
+
+        Returns:
+            z: a PyTorch Tensor representing image embedding(s).
+        '''
+
         z = self.encoder(x)
 
         return z
     
     def reconstruct(self, z: torch.Tensor) -> torch.Tensor:
+        '''
+        Given input embedding(s), returns reconstruction(s).
+        
+        Inputs:
+            z: a PyTorch Tensor representing image embedding(s).
+        
+        Returns:
+            x_reconstruction: a PyTorch Tensor representing image reconstruction(s).
+        '''
+        
         x_reconstruction = self.decoder(z)
 
         return x_reconstruction
