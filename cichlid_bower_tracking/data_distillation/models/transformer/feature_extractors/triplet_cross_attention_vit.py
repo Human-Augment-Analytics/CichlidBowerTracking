@@ -1,4 +1,5 @@
 from typing import Optional
+from collections import OrderedDict
 
 from data_distillation.models.transformer.feature_extractors.extractor import Extractor
 from data_distillation.models.transformer.feature_extractors.classifier import Classifier
@@ -43,6 +44,18 @@ class TripletCrossAttentionViT(nn.Module):
                                    mlp_ratio=extractor_mlp_ratio, patch_dim=extractor_patch_dim, patch_kernel_size=extractor_patch_kernel_size, patch_stride=extractor_patch_stride, \
                                    patch_ratio=extractor_patch_ratio, patch_ratio_decay=extractor_patch_ratio_decay, patch_n_convs=extractor_patch_n_convs, use_minipatch=extractor_use_minipatch)
         self.classifier = Classifier(embed_dim=embed_dim, num_heads=num_classifier_heads, num_classes=num_classes, depth=classifier_depth, dropout=classifier_dropout, mlp_ratio=classifier_mlp_ratio)
+
+    def prepare_classifier_for_finetuning(self, new_num_classes: int) -> None:
+        '''
+        Prepares the Classifier of a pre-trained model for fine-tuning by replacing the head of the MLP.
+
+        Inputs:
+            new_num_classes: the number of classes in the fine-tuning dataset.
+        '''
+
+        old_num_classes = self.classifier.prepare_for_finetuning(new_num_classes=new_num_classes)
+
+        print(f'Model prepared for fine-tuning: number of classes changed from {old_num_classes} to {new_num_classes}.')
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
         '''
