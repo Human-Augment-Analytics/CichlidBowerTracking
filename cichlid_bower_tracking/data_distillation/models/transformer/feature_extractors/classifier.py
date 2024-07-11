@@ -37,7 +37,7 @@ class Classifier(nn.Module):
             nn.ReLU(),
             nn.Linear(in_features=int(self.embed_dim * self.mlp_ratio), out_features=int(self.embed_dim * (self.mlp_ratio ** 2))),
             nn.BatchNorm1d(num_features=int(self.embed_dim * (self.mlp_ratio ** 2))),
-            nn.reLU(),
+            nn.ReLU(),
             nn.Linear(in_features=int(self.embed_dim * (self.mlp_ratio ** 2)), out_features=self.num_classes)
         )
 
