@@ -61,7 +61,7 @@ class Extractor(nn.Module):
                                               stride=self.patch_stride, ratio=self.patch_ratio, ratio_decay=self.patch_ratio_decay, n_convs=self.patch_n_convs)
 
         self.cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
-        self.pos_encoder = PositonalEncoding(embed_dim=embed_dim, n_patches=self.patcher.npatches)
+        self.pos_encoder = PositonalEncoding(embed_dim=embed_dim, n_patches=self.patcher.npatches, add_one=True)
 
         self.transformer_blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
         self.cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)

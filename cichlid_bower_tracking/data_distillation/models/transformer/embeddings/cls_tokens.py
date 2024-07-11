@@ -29,6 +29,6 @@ class CLSTokens(nn.Module):
         batch_size = x.shape[0]
         
         cls_tokens = self.cls_tokens.expand(batch_size, -1, -1)
-        out = torch.cat(cls_tokens, x)
+        out = torch.cat((cls_tokens, x), dim=1)
 
         return out

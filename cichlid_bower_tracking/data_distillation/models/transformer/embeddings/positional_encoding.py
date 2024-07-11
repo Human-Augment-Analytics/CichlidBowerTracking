@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch
 
 class PositonalEncoding(nn.Module):
-    def __init__(self, embed_dim: int, n_patches: int):
+    def __init__(self, embed_dim: int, n_patches: int, add_one=False):
         '''
         Initializes an instance of the PositionalEncoding class.
 
@@ -17,8 +17,9 @@ class PositonalEncoding(nn.Module):
 
         self.embed_dim = embed_dim
         self.n_patches = n_patches
+        self.add_one = add_one
 
-        self.pos_embedding = nn.Parameter(torch.zeros(1, self.n_patches, self.embed_dim))
+        self.pos_embedding = nn.Parameter(torch.zeros(1, self.n_patches + 1 * self.add_one, self.embed_dim))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
