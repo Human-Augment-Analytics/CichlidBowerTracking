@@ -41,6 +41,37 @@ class Classifier(nn.Module):
             nn.Linear(in_features=int(self.embed_dim * (self.mlp_ratio ** 2)), out_features=self.num_classes)
         )
 
+    def __str__(self) -> str:
+        '''
+        Returns a string representation of the Classifier component.
+
+        Inputs: None.
+
+        Returns:
+            string: a string representation of the Classifier component.
+        '''
+
+        string = f'Classifier\n{"=" * 80}\n'
+        string += f'{"Name":30s} | {"# Params":12s} | {"Size":30s}\n'
+
+        total_num_params = 0
+
+        for name, param in self.extractor.named_parameters():
+            if not param.requires_grad():
+                continue
+
+            num_params = param.numel()
+            total_num_params += num_params
+
+            string += f'{name:30s} | {(num_params):12d} | {str(tuple(param.size())):30s}\n'
+
+        string += f'{"-" * 80}\n'
+        string += f'{"TOTAL CLASSIFIER # PARAMS":30s} | {total_num_params:45d}\n'
+
+        self.num_params = total_num_params
+
+        return string
+
     def prepare_for_finetuning(self, new_num_classes: int) -> int:
         '''
         Prepares a pre-trained Classifier for fine-tuning by replacing the head of the MLP.

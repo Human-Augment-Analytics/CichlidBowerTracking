@@ -1,4 +1,6 @@
-from typing import Optional
+import os
+
+from typing import Optional, Tuple
 from collections import OrderedDict
 
 from data_distillation.models.transformer.feature_extractors.extractor import Extractor
@@ -44,6 +46,42 @@ class TripletCrossAttentionViT(nn.Module):
                                    mlp_ratio=extractor_mlp_ratio, patch_dim=extractor_patch_dim, patch_kernel_size=extractor_patch_kernel_size, patch_stride=extractor_patch_stride, \
                                    patch_ratio=extractor_patch_ratio, patch_ratio_decay=extractor_patch_ratio_decay, patch_n_convs=extractor_patch_n_convs, use_minipatch=extractor_use_minipatch)
         self.classifier = Classifier(embed_dim=embed_dim, num_heads=num_classifier_heads, num_classes=num_classes, depth=classifier_depth, dropout=classifier_dropout, mlp_ratio=classifier_mlp_ratio)
+
+    def __str__(self) -> str:
+        '''
+        Returns a string representation of the entire T-CAiT model.
+
+        Inputs: None.
+
+        Returns:
+            string: a string representation of the entire T-CAiT model.
+        '''
+
+        extractor_string = str(self.extractor)
+        classifier_string = str(self.classifier)
+
+        self.num_params = self.extractor.num_params + self.classifier.num_params
+
+        string = extractor_string + '\n' + classifier_string + '\n'
+        string += f'{"=" * 80}\n'
+        string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":30s} | {self.num_params:45d}\n'
+
+        return string
+
+    def save_weights(self, filepath: str) -> None:
+        '''
+        Saves the weights of the full T-CAiT model to the passed filepath.
+
+        Inputs:
+            filepath: a system path to the file where the model weights will be saved.
+        '''
+
+        filedir = filepath.rstrip('/ ').split('/')[:-1]
+        assert os.path.exists(filedir)
+
+        print(f'Saving model weights to {filepath}...')
+        torch.save(self.state_dict(), filepath)
+        print(f'Model saved successfully to {filepath}!')
 
     def prepare_classifier_for_finetuning(self, new_num_classes: int) -> None:
         '''

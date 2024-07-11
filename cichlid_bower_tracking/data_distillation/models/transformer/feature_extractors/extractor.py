@@ -66,6 +66,37 @@ class Extractor(nn.Module):
         self.transformer_blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
         self.cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
 
+    def __str__(self) -> str:
+        '''
+        Returns a string representation of the Extractor component.
+
+        Inputs: None.
+
+        Returns:
+            string: a string representation of the Extractor component.
+        '''
+
+        string = f'Extractor\n{"=" * 80}\n'
+        string += f'{"Name":30s} | {"Params":12s} | {"Size":30s}\n'
+
+        total_num_params = 0
+
+        for name, param in self.extractor.named_parameters():
+            if not param.requires_grad():
+                continue
+
+            num_params = param.numel()
+            total_num_params += num_params
+
+            string += f'{name:30s} | {(num_params):12d} | {str(tuple(param.size())):30s}\n'
+
+        string += f'{"-" * 80}\n'
+        string += f'{"TOTAL EXTRACTOR # PARAMS":30s} | {total_num_params:45d}\n'
+
+        self.num_params = total_num_params
+
+        return string
+
     def _embed(self, x: torch.Tensor) -> torch.Tensor:
         '''
         Uses the patcher, cls_tokenizer, and pos_encoder (in that order) to embed the input.
