@@ -1,3 +1,5 @@
+from typing import Tuple, List
+
 import torch.nn as nn
 import torch
 
@@ -56,6 +58,28 @@ class MiniPatchEmbedding(nn.Module):
         self.final_conv = nn.Conv2d(in_channels=self.after_stack_dim, out_channels=self.embed_dim, kernel_size=1, stride=1)
         self.flatten = nn.Flatten(start_dim=2)
 
+    def get_num_patches_and_dims_list(self, new_dim: int) -> Tuple[int, List[int]]:
+        '''
+        Given an input dimension, returns the number of patches in an image of said dimension and the list of intermediate dimensions from the convolutional stack.
+
+        Inputs:
+            new_dim: the initial dimension to be used.
+
+        Returns:
+            new_num_patches: the number of patches in an image of said dimension.
+            dims_list: the list of intermediate dimensions from the convolutional stack.
+        '''
+
+        new_num_patches, dim = 0, new_dim
+        dims_list = [dim]
+        for _ in range(self.n_convs - 1):
+            dim = int(((dim - self.kernel_size) // 2) + 1)
+            dims_list.append(dim)
+
+            new_num_patches = int(math.pow(dim, 2))
+
+        return new_num_patches, dims_list
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         '''
         Extracts "patch" embeddings from the input image batch Tensor.
@@ -68,7 +92,8 @@ class MiniPatchEmbedding(nn.Module):
         '''
 
         assert len(x.shape) == 4
-        assert x.shape[:1] == (self.in_channels, self.in_dim, self.in_dim) # shape (N, C_in, D_in, D_in)
+        assert x.shape[1] == self.in_channels
+        assert x.shape[2] == x.shape[3]
 
         out = self.conv_stack[0](x)
         for i in range(1, len(self.seq)):

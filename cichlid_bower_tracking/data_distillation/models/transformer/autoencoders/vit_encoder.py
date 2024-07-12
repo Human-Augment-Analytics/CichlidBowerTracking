@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch
 
 class ViTEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, patcher: Union[PatchEmbedding, MiniPatchEmbedding], n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
+    def __init__(self, embed_dim: int, n_heads: int, patcher: Union[PatchEmbedding, MiniPatchEmbedding], pos_enc: PositonalEncoding, n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
         '''
         Initializes an instance of the ViTEncoder class.
 
@@ -32,7 +32,7 @@ class ViTEncoder(nn.Module):
         self.nheads = n_heads
 
         self.patcher = patcher
-        self.pos_enc = PositonalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.npatches)
+        self.pos_enc = pos_enc
 
         self.p_dropout = p_dropout
         self.mlp_ratio = mlp_ratio

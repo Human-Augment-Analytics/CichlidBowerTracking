@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+import math
 
 from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
@@ -8,6 +9,7 @@ from data_distillation.models.transformer.embeddings.cls_tokens import CLSTokens
 from data_distillation.models.transformer.attention_mechs.cross_attention import CrossAttention
 from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
 
+import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
@@ -61,7 +63,7 @@ class Extractor(nn.Module):
                                               stride=self.patch_stride, ratio=self.patch_ratio, ratio_decay=self.patch_ratio_decay, n_convs=self.patch_n_convs)
 
         self.cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
-        self.pos_encoder = PositonalEncoding(embed_dim=embed_dim, n_patches=self.patcher.npatches, add_one=True)
+        self.pos_encoder = PositonalEncoding(embed_dim=embed_dim, n_patches=(self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]), add_one=True)
 
         self.transformer_blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
         self.cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
@@ -113,6 +115,58 @@ class Extractor(nn.Module):
         out_embed = self.pos_encoder(out_embed)
 
         return out_embed
+    
+    def _interpolate_pos_encoding(self, new_dim: int) -> torch.Tensor:
+        '''
+        Interpolates the positional encoding parameter to prepare for fine-tuning on larger image data.
+
+        Inputs:
+            new_dim: the new image data dimension.
+        
+        Returns:
+            new_pos_embedding: the interpolated positional embedding.
+        '''
+
+        new_n_patches = self.patcher.get_num_patches(new_dim=new_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(new_dim=new_dim)[0]
+        old_n_patches = self.pos_encoder.pos_embedding.shape[1] - 1
+
+        if new_n_patches == old_n_patches:
+            return self.pos_encoder.pos_embedding
+        
+        class_pos_embedding = self.pos_encoder.pos_embedding[:, 0]
+        old_patch_pos_embedding = self.pos_encoder.pos_embedding[:, 1:]
+
+        old_size = int(math.sqrt(old_n_patches))
+        new_size = int(math.sqrt(new_n_patches))
+
+        new_patch_pos_embedding = F.interpolate(
+            old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+            size=(new_size, new_size),
+            mode='bicubic'
+        )
+
+        new_patch_pos_embedding = new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        new_pos_embedding = torch.cat((class_pos_embedding.unsqueeze(0), new_patch_pos_embedding), dim=1)
+
+        return new_pos_embedding
+    
+    def prepare_for_finetuning(self, new_dim: int) -> None:
+        '''
+        Prepares the Extractor for fine-tuning.
+
+        Inputs:
+            new_dim: the new image data dimension.
+        '''
+        
+        assert new_dim % self.patch_dim == 0
+
+        new_num_patches = self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]
+        self.pos_encoder.n_patches = new_num_patches
+
+        new_pos_embedding = self._interpolate_pos_encoding(shape=(1, new_num_patches + 1, self.embed_dim), new_dim=self.in_dim)
+        self.pos_encoder.pos_embedding = nn.Parameter(new_pos_embedding)
+
+        self.in_dim = new_dim
     
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''

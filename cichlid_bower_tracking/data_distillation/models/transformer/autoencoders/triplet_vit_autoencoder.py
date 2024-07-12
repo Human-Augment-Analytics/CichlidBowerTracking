@@ -1,10 +1,13 @@
 from typing import Tuple
 
-from embeddings.patch_embedding import PatchEmbedding
-from embeddings.mini_patch_embedding import MiniPatchEmbedding
 
-from embeddings.patch_transpose import PatchTranspose
-from embeddings.mini_patch_transpose import MiniPatchTranspose
+from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
+from data_distillation.models.transformer.embeddings.patch_transpose import PatchTranspose
+
+from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
+from data_distillation.models.transformer.embeddings.mini_patch_transpose import MiniPatchTranspose
+
+from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
 
 from vit_encoder import ViTEncoder
 from vit_decoder import ViTDecoder
@@ -81,18 +84,20 @@ class TripletViTAutoencoder(nn.Module):
         self.patcher_dim = patcher_dim
 
         if not self.use_minipatching:
-            self.patcher = PatchEmbedding(embed_dim=self.embed_dim, batch_size=self.batch_size, in_channels=self.img_channels, in_dim=self.img_dim, patch_dim=self.patcher_dim)
-            self.transposer = PatchTranspose(embed_dim=self.embed_dim,batch_size=self.batch_size, out_channels=self.img_channels, out_dim=self.img_dim, patch_dim=self.patcher_dim)
+            self.patcher = PatchEmbedding(embed_dim=self.embed_dim, batch_size=self.batch_size, in_channels=self.img_channels, patch_dim=self.patcher_dim)
+            self.transposer = PatchTranspose(embed_dim=self.embed_dim, batch_size=self.batch_size, out_channels=self.img_channels, out_dim=self.img_dim, patch_dim=self.patcher_dim)
         else:
-            self.patcher = MiniPatchEmbedding(embed_dim=self.embed_dim, batch_size=self.batch_size, in_channels=self.img_channels, in_dim=self.img_dim, \
-                                              kernel_size=self.patcher_kernel_size, stride=self.patcher_stride, ratio=self.patcher_ratio, ratio_decay=self.patcher_ratio_decay, n_convs=self.patcher_n_convs)
+            self.patcher = MiniPatchEmbedding(embed_dim=self.embed_dim, batch_size=self.batch_size, in_channels=self.img_channels, kernel_size=self.patcher_kernel_size, \
+                                              stride=self.patcher_stride, ratio=self.patcher_ratio, ratio_decay=self.patcher_ratio_decay, n_convs=self.patcher_n_convs)
             
-            self.transposer = MiniPatchTranspose(embed_dim=self.embed_dim, patcher_dims_list=self.patcher.dims_list, patcher_intermediate_channels=self.patcher.intermediate_channels, n_patches=self.patcher.npatches, \
-                                                 batch_size=self.batch_size, out_channels=self.img_channels, out_dim=self.img_dim, kernel_size=self.transposer_kernel_size, stride=self.transposer_stride, \
-                                                 ratio=self.transposer_ratio, ratio_growth=self.transposer_ratio_growth, n_deconvs=self.transposer_n_deconvs)
+            self.transposer = MiniPatchTranspose(embed_dim=self.embed_dim, patcher_dims_list=self.patcher.get_num_patches_and_dims_list(self.img_dim)[1], patcher_intermediate_channels=self.patcher.intermediate_channels,
+                                                 n_patches=self.patcher.get_num_patches_and_dims_list(self.img_dim)[0], batch_size=self.batch_size, out_channels=self.img_channels, out_dim=self.img_dim, kernel_size=self.transposer_kernel_size, \
+                                                 stride=self.transposer_stride, ratio=self.transposer_ratio, ratio_growth=self.transposer_ratio_growth, n_deconvs=self.transposer_n_deconvs)
             
-        self.encoder = ViTEncoder(embed_dim=self.embed_dim, n_heads=self.n_heads, patcher=self.patcher, n_encoders=self.n_encoders, p_dropout=self.encoder_dropout, mlp_ratio=self.encoder_mlp_ratio)
-        self.decoder = ViTDecoder(embed_dim=self.embed_dim, n_heads=self.n_heads, patcher=self.patcher, n_decoders=self.n_decoders, p_dropout=self.decoder_dropout, mlp_ratio=self.decoder_mlp_ratio)
+        self.pos_enc = PositonalEncoding(embed_dim=self.embed_dim, n_patches=(self.patcher.get_num_patches(self.img_dim) if not self.use_minipatching else self.patcher.get_num_patches_and_dims_list(self.img)[0]))
+
+        self.encoder = ViTEncoder(embed_dim=self.embed_dim, n_heads=self.n_encoder_heads, patcher=self.patcher, pos_enc=self.pos_enc, n_encoders=self.n_encoders, p_dropout=self.encoder_dropout, mlp_ratio=self.encoder_mlp_ratio)
+        self.decoder = ViTDecoder(embed_dim=self.embed_dim, n_heads=self.n_decoder_heads, transposer=self.transposer, n_decoders=self.n_decoders, p_dropout=self.decoder_dropout, mlp_ratio=self.decoder_mlp_ratio)
 
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor]:
