@@ -1,16 +1,11 @@
 from typing import List, Dict, Union 
 import argparse, os
 
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-
 parser = argparse.ArgumentParser(description='Accept arguments that refine the counting process.')
 
 parser.add_argument('base_dir', type=str, help='The base directory of the dataset.')
 parser.add_argument('--count_type', '-t', type=str, choices=['videos', 'frames'],  help='Specifies what specifically should be counted (unique videos, individual frames, etc.).')
 parser.add_argument('--split', '-s', type=str, choices=['train', 'test', 'valid'],  help='Specifies which split the count should be performed on.')
-parser.add_argument('--plot', '-p', action='store_true', help='Flag specifying that the results of the count should be plotted and displayed; only useful if no split is specified.')
 
 args = parser.parse_args()
 
