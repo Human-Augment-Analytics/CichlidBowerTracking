@@ -83,17 +83,20 @@ class TripletCrossAttentionViT(nn.Module):
         torch.save(self.state_dict(), filepath)
         print(f'Model saved successfully to {filepath}!')
 
-    def prepare_classifier_for_finetuning(self, new_num_classes: int) -> None:
+    def prepare_classifier_for_finetuning(self, new_num_classes: int, new_dim: int) -> None:
         '''
         Prepares the Classifier of a pre-trained model for fine-tuning by replacing the head of the MLP.
 
         Inputs:
             new_num_classes: the number of classes in the fine-tuning dataset.
+            new_dim: the dimension of the images to be used in fine-tuning.
         '''
 
-        old_num_classes = self.classifier.prepare_for_finetuning(new_num_classes=new_num_classes)
+        old_img_dim = self.extractor.prepare_for_finetuning(new_dim=new_dim)
+        print(f'Extractor prepared for fine-tuning: image dimension changed from {old_img_dim} to {new_dim}.')
 
-        print(f'Model prepared for fine-tuning: number of classes changed from {old_num_classes} to {new_num_classes}.')
+        old_num_classes = self.classifier.prepare_for_finetuning(new_num_classes=new_num_classes)
+        print(f'Classifier prepared for fine-tuning: number of classes changed from {old_num_classes} to {new_num_classes}.')
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:
         '''

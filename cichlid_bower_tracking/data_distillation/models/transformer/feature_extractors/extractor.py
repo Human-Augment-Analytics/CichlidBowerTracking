@@ -150,14 +150,17 @@ class Extractor(nn.Module):
 
         return new_pos_embedding
     
-    def prepare_for_finetuning(self, new_dim: int) -> None:
+    def prepare_for_finetuning(self, new_dim: int) -> int:
         '''
         Prepares the Extractor for fine-tuning.
 
         Inputs:
-            new_dim: the new image data dimension.
+            new_dim: the new image data dimension to be used in fine-tuning.
+
+        Returns:
+            old_in_dim: the old image data dimension from pre-training.
         '''
-        
+
         assert new_dim % self.patch_dim == 0
 
         new_num_patches = self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]
@@ -166,7 +169,10 @@ class Extractor(nn.Module):
         new_pos_embedding = self._interpolate_pos_encoding(shape=(1, new_num_patches + 1, self.embed_dim), new_dim=self.in_dim)
         self.pos_encoder.pos_embedding = nn.Parameter(new_pos_embedding)
 
+        old_in_dim = self.in_dim
         self.in_dim = new_dim
+
+        return old_in_dim
     
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
