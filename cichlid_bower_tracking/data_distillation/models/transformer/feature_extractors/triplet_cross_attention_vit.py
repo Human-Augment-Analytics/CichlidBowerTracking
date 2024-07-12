@@ -83,7 +83,7 @@ class TripletCrossAttentionViT(nn.Module):
         torch.save(self.state_dict(), filepath)
         print(f'Model saved successfully to {filepath}!')
 
-    def prepare_classifier_for_finetuning(self, new_num_classes: int, new_dim: int) -> None:
+    def prepare_for_finetuning(self, new_num_classes: int, new_dim: int) -> None:
         '''
         Prepares the Classifier of a pre-trained model for fine-tuning by replacing the head of the MLP.
 
