@@ -48,51 +48,59 @@ df.to_csv(args.tgtfile, mode='w', index=False)
 total_num_samples = 0
 
 states_dict = {class_dir: dict() for class_dir in class_dirs}
+negative_class_dirs = [class_dir for class_dir in class_dirs]
+
 curr_batch_size = 0
 for class_dir in class_dirs:
     full_class_dir = parser.basedir.rstrip('/ ') + '/' + class_dir
-
-    anchor_files = os.listdir(full_class_dir)
-    positive_files = [class_file for class_file in anchor_files]
-
     states_dict[class_dir] = {class_file: [False, False, False] for class_file in anchor_files}
 
-    num_samples = 0
-    while num_samples <= (args.maxperclass if args.maxperclass is not None else len(anchor_files)) and len(anchor_files) > 0:
-        # get anchor image file
-        anchor_idx = int(random.random() * len(class_files))
+    class_files = os.listdir(full_class_dir)
 
-        anchor_file = full_class_dir.rstrip('/ ') + '/' + anchor_files[anchor_idx]
+    num_samples = 0
+    while num_samples <= (args.maxperclass if args.maxperclass is not None else len(class_files)) and sum([states_dict[class_dir][class_file][ANCHOR_IDX] for class_file in class_files]) < len(class_files):
+        # get anchor image file
+        anchor_files = [anchor_file for anchor_file in class_files if not states_dict[class_dir][anchor_file][ANCHOR_IDX]]
+
+        anchor_idx = int(random.random() * len(class_files))
+        anchor_file = anchor_files[anchor_idx]
+        full_anchor_file = full_class_dir.rstrip('/ ') + '/' + anchor_files[anchor_idx]
+        
         states_dict[class_dir][anchor_file][ANCHOR_IDX] = True
 
-        anchor_files.remove(anchor_file)
-
         # get positive image file
+        positive_files = [positive_file for positive_file in class_files if (positive_file != anchor_file and not states_dict[class_dir][positive_file][POS_IDX])]
+        
         positive_idx = anchor_idx
-        positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
+        positive_file = positive_files[positive_idx]
+        full_positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
 
         while positive_file == anchor_file:
-            positive_idx = int(random.random() * len(class_files))
-            positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
+            positive_idx = anchor_idx
+            positive_file = positive_files[positive_idx]
+            full_positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
 
         states_dict[class_dir][positive_file][POS_IDX] = True
 
         # get negative image file
-        states_outer_keys = list(states_dict.keys())
-
-        negative_class_idx = int(random.random() * len(states_outer_keys))
-        negative_class_dir = states_outer_keys[negative_class_idx]
+        negative_class_idx = int(random.random() * len(negative_class_dirs))
+        negative_class_dir = negative_class_dirs[negative_class_idx]
 
         full_negative_class_dir = args.basedir.rstrip('/ ') + '/' + negative_class_dir
-        negative_class_files = os.listdir(full_negative_class_dir)
+        negative_files = [negative_file for negative_file in os.listdir(full_negative_class_dir) if not states_dict[negative_class_dir][negative_file][NEG_IDX]]
 
-        negative_idx = int(random.random() * len(negative_class_files))
-
-        negative_file = full_negative_class_dir.rstrip('/ ') + '/' + negative_class_files[negative_idx]
+        negative_idx = int(random.random() * len(negative_files))
+        negative_file = negative_files[negative_idx]
+        full_negative_file = full_negative_class_dir.rstrip('/ ') + '/' + negative_files[negative_idx]
+        
         states_dict[negative_class_dir][negative_file][NEG_IDX] = True
+
+        if sum([states_dict[negative_class_dir][negative_file][NEG_IDX] for negative_file in negative_files]) == len(negative_files):
+            negative_class_dirs.remove(negative_class_dir)
 
         # append to DataFrame, increment num_samples and curr_batch_size, and write to csv (if necessary)
         df.append({'anchor_path': anchor_file, 'positive_path': positive_file, 'negative_path': negative_file}, ignore_index=True)
+        
         num_samples += 1
         curr_batch_size += 1
 
