@@ -25,7 +25,7 @@ for class_dir in class_dirs:
     full_class_dir = args.basedir.rstrip('/ ') + '/' + class_dir
     class_files = os.listdir(full_class_dir)
 
-    if int(len(class_files) * (len(class_files) - 1) // 2) < args.minperclass: # similar to the handshake problem
+    if len(class_files) < args.minperclass: 
         class_dirs.remove(class_dir)
 
         if args.debug:
@@ -44,6 +44,8 @@ random.seed(args.seed)
 
 df = pd.DataFrame(columns=['anchor_path', 'positive_path', 'negative_path'])
 df.to_csv(args.tgtfile, mode='w', index=False)
+
+total_num_samples = 0
 
 states_dict = {class_dir: dict() for class_dir in class_dirs}
 curr_batch_size = 0
@@ -67,10 +69,12 @@ for class_dir in class_dirs:
 
         # get positive image file
         positive_idx = anchor_idx
-        while positive_idx == anchor_idx:
-            positive_idx = int(random.random() * len(class_files))
-
         positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
+
+        while positive_file == anchor_file:
+            positive_idx = int(random.random() * len(class_files))
+            positive_file = full_class_dir.rstrip('/ ') + '/' + positive_files[positive_idx]
+
         states_dict[class_dir][positive_file][POS_IDX] = True
 
         # get negative image file
@@ -101,7 +105,10 @@ for class_dir in class_dirs:
             if args.debug:
                 print(f'\t...Batch written to {args.tgtfile} [{datetime.datetime.now()}].')
 
+    total_num_samples += num_samples
+
 # if any data remaining in the DataFrame, write it to the csv file
 df.to_csv(args.tgtfile, mode='w', index=False)
+total_num_samples += len(df['anchor_path'])
 
-print(f'Dataset construction complete [{datetime.datetime.now()}]: csv stored at {args.tgtfile}')
+print(f'Dataset construction complete [{datetime.datetime.now()}]: csv with {total_num_samples} samples stored at {args.tgtfile}.')
