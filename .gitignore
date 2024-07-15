@@ -1,6 +1,7 @@
 .idea
 cichlid_bower_tracking/debug.py
 cichlid_bower_tracking/monkey_patches
+cichlid_bower_tracking/misc_scripts/clean_data.py
 *.pyc
 .vscode
 *.DS_store
