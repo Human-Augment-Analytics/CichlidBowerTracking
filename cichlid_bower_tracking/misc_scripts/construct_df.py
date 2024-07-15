@@ -42,7 +42,7 @@ print(f'Constructing a triplet dataset using data found inside {args.basedir} [{
 ANCHOR_IDX, POS_IDX, NEG_IDX = 0, 1, 2
 random.seed(args.seed)
 
-df = pd.DataFrame(columns=['anchor_path', 'positive_path', 'negative_path'])
+df = pd.DataFrame(columns=['anchor_path', 'positive_path', 'negative_path', 'class'])
 df.to_csv(args.tgtfile, mode='w', index=False)
 
 total_num_samples = 0
@@ -50,7 +50,7 @@ total_num_samples = 0
 states_dict = {class_dir: dict() for class_dir in class_dirs}
 negative_class_dirs = [class_dir for class_dir in class_dirs]
 
-curr_batch_size = 0
+class_num, curr_batch_size = 0, 0
 for class_dir in class_dirs:
     full_class_dir = parser.basedir.rstrip('/ ') + '/' + class_dir
     states_dict[class_dir] = {class_file: [False, False, False] for class_file in anchor_files}
@@ -99,14 +99,14 @@ for class_dir in class_dirs:
             negative_class_dirs.remove(negative_class_dir)
 
         # append to DataFrame, increment num_samples and curr_batch_size, and write to csv (if necessary)
-        df.append({'anchor_path': anchor_file, 'positive_path': positive_file, 'negative_path': negative_file}, ignore_index=True)
+        df.append({'anchor_path': anchor_file, 'positive_path': positive_file, 'negative_path': negative_file, 'class': class_num}, ignore_index=True)
         
         num_samples += 1
         curr_batch_size += 1
 
         if curr_batch_size == args.batchsize:
             df.to_csv(args.tgtfile, mode='a', index=False, header=False)
-            df = pd.DataFrame(columns=['anchor_path', 'positive_path', 'negative_path'])
+            df = pd.DataFrame(columns=['anchor_path', 'positive_path', 'negative_path', 'class'])
 
             curr_batch_size = 0
 
@@ -114,6 +114,7 @@ for class_dir in class_dirs:
                 print(f'\t...Batch written to {args.tgtfile} [{datetime.datetime.now()}].')
 
     total_num_samples += num_samples
+    class_num += 1
 
 # if any data remaining in the DataFrame, write it to the csv file
 df.to_csv(args.tgtfile, mode='w', index=False)

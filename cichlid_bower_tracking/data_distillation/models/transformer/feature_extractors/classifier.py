@@ -20,7 +20,9 @@ class Classifier(nn.Module):
             mlp_ratio: the size of the hidden layer in each transformer block's MLP, also used for scaling the MLP in the head of this classifier; defaults to 4.0.
         '''
 
-        self.__version__ = '0.1.1'
+        super(Classifier, self).__init__()
+
+        self.__version__ = '0.1.2'
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -52,22 +54,23 @@ class Classifier(nn.Module):
             string: a string representation of the Classifier component.
         '''
 
-        string = f'Classifier\n{"=" * 80}\n'
-        string += f'{"Name":30s} | {"# Params":12s} | {"Size":30s}\n'
+        string = f'Classifier\n{"=" * 90}\n'
+        string += f'{"Name":50s} | {"# Params":12s} | {"Size":20s}\n'
+        string += f'{"-" * 90}\n'
 
         total_num_params = 0
 
-        for name, param in self.extractor.named_parameters():
-            if not param.requires_grad():
+        for name, param in self.named_parameters():
+            if not param.requires_grad:
                 continue
 
             num_params = param.numel()
             total_num_params += num_params
 
-            string += f'{name:30s} | {(num_params):12d} | {str(tuple(param.size())):30s}\n'
+            string += f'{name:50s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
 
-        string += f'{"-" * 80}\n'
-        string += f'{"TOTAL CLASSIFIER # PARAMS":30s} | {total_num_params:45d}\n'
+        string += f'{"-" * 90}\n'
+        string += f'{"TOTAL CLASSIFIER # PARAMS":50s} | {total_num_params:35d}\n'
 
         self.num_params = total_num_params
 

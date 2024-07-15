@@ -53,9 +53,10 @@ class MiniPatchEmbedding(nn.Module):
             init_channels = int(init_channels * self.ratio)
             self.ratio *= self.ratio_decay
 
+        self.conv_stack = nn.Sequential(*self.conv_stack)
         self.intermediate_channels = init_channels
 
-        self.final_conv = nn.Conv2d(in_channels=self.after_stack_dim, out_channels=self.embed_dim, kernel_size=1, stride=1)
+        self.final_conv = nn.Conv2d(in_channels=self.intermediate_channels, out_channels=self.embed_dim, kernel_size=1, stride=1)
         self.flatten = nn.Flatten(start_dim=2)
 
     def get_num_patches_and_dims_list(self, new_dim: int) -> Tuple[int, List[int]]:
@@ -96,7 +97,7 @@ class MiniPatchEmbedding(nn.Module):
         assert x.shape[2] == x.shape[3]
 
         out = self.conv_stack[0](x)
-        for i in range(1, len(self.seq)):
+        for i in range(1, len(self.conv_stack)):
             out = self.conv_stack[i](out)
 
         out = self.final_conv(out) # shape (N, C_embed, D_out, D_out)

@@ -39,8 +39,10 @@ class TripletCrossAttentionViT(nn.Module):
             classifier_dropout: the dropout probability used by each transformer block in the classifier; defaults to 0.1.
             classifier_mlp_ratio: the size of the hidden layer in each transformer block's MLP in the classifier, also used for scaling the MLP in the head of the classifier; defaults to 4.0.
         '''
+
+        super(TripletCrossAttentionViT, self).__init__()
         
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.extractor = Extractor(embed_dim=embed_dim, num_heads=num_extractor_heads, in_channels=in_channels, in_dim=in_dim, depth=extractor_depth, dropout=extractor_dropout, \
                                    mlp_ratio=extractor_mlp_ratio, patch_dim=extractor_patch_dim, patch_kernel_size=extractor_patch_kernel_size, patch_stride=extractor_patch_stride, \
@@ -63,8 +65,8 @@ class TripletCrossAttentionViT(nn.Module):
         self.num_params = self.extractor.num_params + self.classifier.num_params
 
         string = extractor_string + '\n' + classifier_string + '\n'
-        string += f'{"=" * 80}\n'
-        string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":30s} | {self.num_params:45d}\n'
+        string += f'{"=" * 90}\n'
+        string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":50s} | {self.num_params:35d}\n'
 
         return string
 
@@ -83,19 +85,20 @@ class TripletCrossAttentionViT(nn.Module):
         torch.save(self.state_dict(), filepath)
         print(f'Model saved successfully to {filepath}!')
 
-    def prepare_for_finetuning(self, new_num_classes: int, new_dim: int) -> None:
+    def prepare_for_finetuning(self, new_dim: int, new_num_classes: int, new_mlp_ratio: float) -> None:
         '''
         Prepares the Classifier of a pre-trained model for fine-tuning by replacing the head of the MLP.
 
         Inputs:
-            new_num_classes: the number of classes in the fine-tuning dataset.
             new_dim: the dimension of the images to be used in fine-tuning.
+            new_num_classes: the number of classes in the fine-tuning dataset.
+            new_mlp_ratio: the ratio to be used in scaling the hidden layers of the classifier's MLP.
         '''
 
         old_img_dim = self.extractor.prepare_for_finetuning(new_dim=new_dim)
         print(f'Extractor prepared for fine-tuning: image dimension changed from {old_img_dim} to {new_dim}.')
 
-        old_num_classes = self.classifier.prepare_for_finetuning(new_num_classes=new_num_classes)
+        old_num_classes = self.classifier.prepare_for_finetuning(new_num_classes=new_num_classes, new_mlp_ratio=new_mlp_ratio)
         print(f'Classifier prepared for fine-tuning: number of classes changed from {old_num_classes} to {new_num_classes}.')
 
     def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> torch.Tensor:

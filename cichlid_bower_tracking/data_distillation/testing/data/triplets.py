@@ -44,7 +44,7 @@ class Triplets(Dataset):
             negative: the negative image (dissimilar to anchor) in the triplet at the passed index.
         '''
 
-        anchor_path, positive_path, negative_path, = self.df.iloc[index]
+        anchor_path, positive_path, negative_path, y_true = self.df.iloc[index]
         anchor, positive, negative = read_image(anchor_path).float(), read_image(positive_path).float(), read_image(negative_path).float()
 
         if self.transform:
@@ -52,4 +52,4 @@ class Triplets(Dataset):
             positive = self.transform(positive)
             negative = self.transform(negative)
 
-        return (anchor, positive, negative)
+        return (anchor, positive, negative, y_true)

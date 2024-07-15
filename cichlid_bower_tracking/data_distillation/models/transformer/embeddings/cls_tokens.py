@@ -10,7 +10,9 @@ class CLSTokens(nn.Module):
             embed_dim: the embedding dimension to be used.
         '''
 
-        self.__version__ = '0.1.0'
+        super(CLSTokens, self).__init__()
+
+        self.__version__ = '0.1.1'
         self.embed_dim = embed_dim
 
         self.cls_tokens = nn.Parameter(torch.zeros(1, 1, self.embed_dim))

@@ -1,14 +1,18 @@
 from typing import Tuple, Union
 import copy
+import tqdm
 
 from models.convolutional.siamese_autoencoder import SiameseAutoencoder
 from models.convolutional.triplet_autoencoder import TripletAutoencoder
 
-from models.transformer.siamese_vit_autoencoder import SiameseViTAutoencoder
-from models.transformer.triplet_vit_autoencoder import TripletViTAutoencoder
+from models.transformer.autoencoders.siamese_vit_autoencoder import SiameseViTAutoencoder
+from models.transformer.autoencoders.triplet_vit_autoencoder import TripletViTAutoencoder
+
+from models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 
 from losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss
 from losses.triplet_losses.total_triplet_loss import TotalTripletLoss
+from losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss
 
 from misc.epoch_tracker import EpochTracker
 from misc.epoch_logger import EpochLogger
@@ -16,14 +20,16 @@ from misc.epoch_logger import EpochLogger
 from testing.data.pairs import Pairs
 from testing.data.triplets import Triplets
 
+from testing.metrics.accuracy import Accuracy
+
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
 import torch
 
 class DataDistiller:
-    def __init__(self, dataloader: DataLoader, model: Union[SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], loss_fn: Union[TotalSiameseLoss, TotalTripletLoss], \
-                 optimizer: optim.Optimizer, nepochs: int, save_best_weights: bool, save_fp: str, device: str):
+    def __init__(self, dataloader: DataLoader, model: TCAiT, loss_fn: TripletClassificationLoss, \
+                 optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -38,7 +44,7 @@ class DataDistiller:
             device: a string indicating the device on which training/validation and distillation will occur (should be either "cpu" or "gpu").
         '''
         
-        self.__version__ = '0.2.1'
+        self.__version__ = '0.3.0'
 
         self.dataloader = dataloader
         self.model = model
@@ -50,7 +56,12 @@ class DataDistiller:
 
         self.train_logger = EpochLogger(value_type='Training Loss')
         self.valid_logger = EpochLogger(value_type='Validation Loss')
+
+        self.acc_train_logger = EpochLogger(value_type='Training Accuracy')
+        self.acc_valid_logger = EpochLogger(value_type='Valudation Accuracy')
+
         self.nepochs = nepochs
+        self.nclasses = nclasses
 
         self.save_best_weights = save_best_weights
         self.save_fp = save_fp
@@ -75,9 +86,11 @@ class DataDistiller:
 
         # condition on dataset type
         if self.use_pairwise_data:
+            loop = tqdm.tqdm(self.dataloader, total=nbatches, position=0)
+
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
-            for batch, (x1, x2, y) in enumerate(self.dataloader):
+            for batch, (x1, x2, y) in enumerate(loop):
                 # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
                     x1 = x1.cuda()
@@ -104,34 +117,51 @@ class DataDistiller:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
-                # print statements
-                if batch % 10 == 0:
-                    print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                        f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                # update progress bar
+                loop.set_description(f'Batch [{batch}/{nbatches}]')
+                loop.set_postfix(loss=epoch_tracker.avg)
 
             # return the epoch statistics as tracked by the EpochTracker 
             return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+        
         elif self.use_triplet_data:
+            loop = tqdm.tqdm(self.dataloader, total=nbatches, position=0)
+
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
-            for batch, (anchor, positive, negative) in enumerate(self.dataloader):
+
+            metric = Accuracy()
+            acc_tracker = EpochTracker()
+
+            for batch, (anchor, positive, negative, y) in enumerate(loop):
                 # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
                     anchor = anchor.cuda()
                     positive = positive.cuda()
                     negative = negative.cuda()
+                    y = y.cuda()
                 
                 # depending on model type, expect different outputs from forward pass
-                if isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
+                if isinstance(self.model, TCAiT):
+                    z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
+
+                    y_prob = torch.softmax(Y, dim=1)
+                    y_pred = y_prob.argmax(dim=1)
+                elif isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
                     z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(x1, x2)
                 else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
+                    raise Exception(f'Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
 
                 # calculate loss using passed loss_fn
-                if isinstance(self.loss_fn, TotalSiameseLoss):
+                if isinstance(self.loss_fn, TripletClassificationLoss):
+                    loss = self.loss_fn(z_anchor, z_positive, z_negative, y_pred, y)
+                    acc = metric(y_pred, y)
+
+                    acc_tracker.add(acc)
+                elif isinstance(self.loss_fn, TotalTripletLoss):
                     loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                 else: # if/when necessary, add more loss functions in elif-statements
-                    raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+                    raise Exception(f'Invalid loss type: must be TotalTripletLoss or TripletClassificationLoss.')
 
                 # loss value tracking with EpochTracker
                 epoch_tracker.add(loss)
@@ -141,13 +171,18 @@ class DataDistiller:
                 self.optimizer.step()
                 self.optimizer.zero_grad()
 
-                # print statements
-                if batch % 10 == 0:
-                    print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                        f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                # update progress bar
+                loop.set_description(f'Training, Batch [{batch}/{nbatches}]')
+                if not isinstance(self.model, TCAiT):
+                    loop.set_postfix(loss=epoch_tracker.avg)
+                else:
+                    loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
 
-            # return the epoch statistics as tracked by the EpochTracker 
-            return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+            # return the epoch statistics as tracked by the EpochTracker
+            if not isinstance(self.model, TCAiT):
+                return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+            else:
+                return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
         else:
             raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
@@ -166,7 +201,6 @@ class DataDistiller:
 
         # get the total number of batches and create an EpochTracker
         nbatches = len(self.dataloader)
-        epoch_tracker = EpochTracker()
 
         # set model to evaluation mode, prevent model updates with torch.no_grad()
         self.model.eval()
@@ -175,8 +209,12 @@ class DataDistiller:
             batch = 0
 
             if self.use_pairwise_data:
+                loop = tqdm.tqdm(self.dataloader, total=nbatches, position=1)
+
                 # loop over dataloader to perform validation
-                for (x1, x2, y) in enumerate(self.dataloader):
+                epoch_tracker = EpochTracker()
+
+                for (x1, x2, y) in enumerate(loop):
                     # move to CUDA if requested (and able)
                     if self.device == 'gpu' and torch.cuda.is_available():
                         x1 = x1.cuda()
@@ -187,21 +225,20 @@ class DataDistiller:
                     if isinstance(self.model, SiameseAutoencoder):
                         z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception(f'Invalid model type: must be SiameseAutoencoder.')
+                        raise Exception('Invalid model type: must be SiameseAutoencoder.')
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TotalSiameseLoss):
                         loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
                     else: # if/when necessary, add more loss functions in elif-statements
-                        raise Exception(f'Invalid loss type: must be SiameseLoss.')
+                        raise Exception('Invalid loss type: must be SiameseLoss.')
                     
                     # loss value tracking with EpochTracker
                     epoch_tracker.add(loss)
 
-                    # print statements
-                    if batch % 10 == 0:
-                        print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                            f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                    # update progress bar
+                    loop.set_description(f'Validation, Batch [{batch}/{nbatches}]')
+                    loop.set_postfix(loss=epoch_tracker.avg)
 
                     # increment manual batch count    
                     batch += 1
@@ -209,37 +246,61 @@ class DataDistiller:
                 # return the epoch statistics as tracked by the EpochTracker             
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
             elif self.use_triplet_data:
+                loop = tqdm.tqdm(self.dataloader, total=nbatches, position=1)
+
                 # loop over dataloader to perform training
                 epoch_tracker = EpochTracker()
-                for (anchor, positive, negative) in enumerate(self.dataloader):
+
+                metric = Accuracy()
+                acc_tracker = EpochTracker()
+                
+                for (anchor, positive, negative, y) in enumerate(loop):
                     # move to CUDA if requested (and able)
                     if self.device == 'gpu' and torch.cuda.is_available():
                         anchor = anchor.cuda()
                         positive = positive.cuda()
                         negative = negative.cuda()
+                        y = y.cuda()
                     
                     # depending on model type, expect different outputs from forward pass
-                    if isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
+                    if isinstance(self.model, TCAiT):
+                        z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative, y)
+
+                        y_prob = torch.softmax(Y, dim=1)
+                        y_pred = y_prob.argmax(dim=1)
+                    elif isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
                         z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(x1, x2)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
+                        raise Exception('Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
 
                     # calculate loss using passed loss_fn
-                    if isinstance(self.loss_fn, TotalSiameseLoss):
+                    if isinstance(self.loss_fn, TripletClassificationLoss):
+                        loss = self.loss_fn(z_anchor, z_positive, z_negative, y_pred, y)
+                        acc = metric(y_pred, y)
+
+                        acc_tracker.add(acc)
+                    elif isinstance(self.loss_fn, TotalTripletLoss):
                         loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                     else: # if/when necessary, add more loss functions in elif-statements
-                        raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+                        raise Exception('Invalid loss type: must be TotalTripletLoss or TripletClassificationLoss.')
 
                     # loss value tracking with EpochTracker
                     epoch_tracker.add(loss)
 
-                    # print statements
-                    if batch % 10 == 0:
-                        print(f'Epoch: {epoch} [{batch}/{nbatches}]\t' + \
-                            f'Loss: {loss:.4f} [{epoch_tracker.avg:.4f}]')
+                    # update progress bar
+                    loop.set_description(f'Validation, Batch [{batch}/{nbatches}]')
+                    if not isinstance(self.model, TCAiT):
+                        loop.set_postfix(loss=epoch_tracker.avg)
+                    else:
+                        loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
+                        
+                    batch += 1
 
                 # return the epoch statistics as tracked by the EpochTracker 
-                return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+                if not isinstance(self.model, TCAiT):
+                    return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
+                else:
+                    return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
             else:
                 raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
@@ -263,32 +324,45 @@ class DataDistiller:
 
         # loop through passed number of epochs
         for epoch in range(self.nepochs):
-            # perform training on current epoch
-            print(f'\n---------------------------------------------------------------------------------------------')
-            print(f'EPOCH {epoch}: TRAINING')
-            print(f'---------------------------------------------------------------------------------------------\n')
+            print('\n' + '-' * 93)
+            print(f'EPOCH [{epoch}/{self.nepochs}]')
+            print('-' * 93)
 
-            
-            train_min, train_max, train_avg = self._train(epoch=epoch)
-            self.train_logger.add(train_min, train_max, train_avg)
+            # perform training on current epoch
+            if not isinstance(self.model, TCAiT):
+                train_min, train_max, train_avg = self._train(epoch=epoch)
+                self.train_logger.add(train_min, train_max, train_avg)
+            else:
+                train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch)
+                
+                self.train_logger.add(train_min, train_max, train_avg)
+                self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
 
             # perform validation on current epoch
-            print(f'\n---------------------------------------------------------------------------------------------')
-            print(f'EPOCH {epoch}: VALIDATION')
-            print(f'---------------------------------------------------------------------------------------------\n')
-
-            valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
-            self.valid_logger.add(valid_min, valid_max, valid_avg)
+            if not isinstance(self.model, TCAiT):
+                valid_min, valid_max, valid_avg = self._train(epoch=epoch)
+                self.train_logger.add(valid_min, valid_max, valid_avg)
+            else:
+                valid_min, valid_max, valid_avg, valid_acc_min, valid_acc_max, valid_acc_avg = self._train(epoch=epoch)
+                
+                self.valid_logger.add(valid_min, valid_max, valid_avg)
+                self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
 
             # if current model is an improvement, save it and its average loss
-            if valid_avg < best_valid_avg:
-                best_valid_avg = valid_avg
-                best_model = copy.deepcopy(self.model)
+            if not isinstance(self.model, TCAiT):
+                if valid_avg < best_valid_avg:
+                    best_valid_avg = valid_avg
+                    best_model = copy.deepcopy(self.model)
 
+            else:
+                if valid_acc_avg < best_valid_avg:
+                    best_valid_avg = valid_acc_avg
+                    best_model = copy.deepcopy(self.model)
+        
         # final print statement
-        print(f'=============================================================================================')
-        print(f'BEST VALIDATION MODEL LOSS: {best_valid_avg:.4f}')
-        print(f'=============================================================================================\n')
+        print('\n' + '=' * 93)
+        print(f'BEST VALIDATION MODEL {"LOSS" if not isinstance(self.model, TCAiT) else "ACCURACY"}: {best_valid_avg:.4f}')
+        print('=' * 93 + '\n')
 
         # return the best model
         return best_model
@@ -324,6 +398,6 @@ class DataDistiller:
             save_flag = self._save_model_weights(best_model=best_model)
 
             if save_flag:
-                print(f'\tSave successful!')
+                print('\tSave successful!')
             else:
-                print(f'\tSave failed!')
+                print('\tSave failed!')

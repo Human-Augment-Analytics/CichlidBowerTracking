@@ -31,7 +31,7 @@ class PositonalEncoding(nn.Module):
         Returns:
             out: a PyTorch Tensor representing the position-encoded embeddings batch.
         '''
-
+        
         out = x + self.pos_embedding
 
         return out

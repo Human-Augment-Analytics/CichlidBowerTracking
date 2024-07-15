@@ -35,8 +35,10 @@ class Extractor(nn.Module):
             patch_n_convs: the number of convolutions to be used in mini-patch embedding; defaults to 5 (only effective if use_minipatch is True).
             use_minipatch: indicates whether or not mini-patch embedding is used instead of standard patch embedding; defaults to False.
         '''
+
+        super(Extractor, self).__init__()
         
-        self.__version__ = '0.2.0'
+        self.__version__ = '0.2.1'
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -57,7 +59,7 @@ class Extractor(nn.Module):
         
         self.use_minipatch = use_minipatch
         if not self.use_minipatch:
-            self.patcher = PatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, in_dim=self.in_dim, patch_dim=self.patch_dim)
+            self.patcher = PatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, patch_dim=self.patch_dim)
         else:
             self.patcher = MiniPatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, in_dim=self.in_dim, kernel_size=self.patch_kernel_size, \
                                               stride=self.patch_stride, ratio=self.patch_ratio, ratio_decay=self.patch_ratio_decay, n_convs=self.patch_n_convs)
@@ -86,22 +88,23 @@ class Extractor(nn.Module):
             string: a string representation of the Extractor component.
         '''
 
-        string = f'Extractor\n{"=" * 80}\n'
-        string += f'{"Name":30s} | {"Params":12s} | {"Size":30s}\n'
+        string = f'Extractor\n{"=" * 90}\n'
+        string += f'{"Name":50s} | {"Params":12s} | {"Size":20s}\n'
+        string += f'{"-" * 90}\n'
 
         total_num_params = 0
 
-        for name, param in self.extractor.named_parameters():
-            if not param.requires_grad():
+        for name, param in self.named_parameters():
+            if not param.requires_grad:
                 continue
 
             num_params = param.numel()
             total_num_params += num_params
 
-            string += f'{name:30s} | {(num_params):12d} | {str(tuple(param.size())):30s}\n'
+            string += f'{name:50s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
 
-        string += f'{"-" * 80}\n'
-        string += f'{"TOTAL EXTRACTOR # PARAMS":30s} | {total_num_params:45d}\n'
+        string += f'{"-" * 90}\n'
+        string += f'{"TOTAL EXTRACTOR # PARAMS":50s} | {total_num_params:35d}\n'
 
         self.num_params = total_num_params
 

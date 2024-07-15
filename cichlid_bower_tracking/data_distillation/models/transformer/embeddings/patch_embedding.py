@@ -39,7 +39,7 @@ class PatchEmbedding(nn.Module):
             new_num_patches: the number of patches in an image with the new dimension.
         '''
 
-        assert new_dim % self.patch_dim
+        assert new_dim % self.patch_dim == 0
         new_num_patches = int(math.pow(new_dim // self.patch_dim, 2))
         
         return new_num_patches

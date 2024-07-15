@@ -44,7 +44,7 @@ class TransformerEncoder(nn.Module):
         '''
 
         out1 = self.norm1(x)
-        out1 = self.mha(out1)
+        out1, _ = self.mha(out1, out1, out1)
 
         out1 += x
 
