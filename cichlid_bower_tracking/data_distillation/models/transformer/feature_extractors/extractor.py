@@ -36,7 +36,7 @@ class Extractor(nn.Module):
             use_minipatch: indicates whether or not mini-patch embedding is used instead of standard patch embedding; defaults to False.
         '''
         
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.2.0'
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -62,11 +62,19 @@ class Extractor(nn.Module):
             self.patcher = MiniPatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, in_dim=self.in_dim, kernel_size=self.patch_kernel_size, \
                                               stride=self.patch_stride, ratio=self.patch_ratio, ratio_decay=self.patch_ratio_decay, n_convs=self.patch_n_convs)
 
-        self.cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
-        self.pos_encoder = PositonalEncoding(embed_dim=embed_dim, n_patches=(self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]), add_one=True)
+        self.anchor_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        self.positive_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        self.negative_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        
+        n_patches = self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]
+        self.anchor_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
+        self.positive_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
+        self.negative_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
 
         self.transformer_blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
-        self.cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
+        
+        self.positive_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
+        self.negative_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
 
     def __str__(self) -> str:
         '''
@@ -99,24 +107,37 @@ class Extractor(nn.Module):
 
         return string
 
-    def _embed(self, x: torch.Tensor) -> torch.Tensor:
+    def _embed(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
-        Uses the patcher, cls_tokenizer, and pos_encoder (in that order) to embed the input.
+        Uses the patcher, cls_tokenizers, and pos_encoders (in that order) to embed the input.
 
         Inputs:
-            x: the image batch to be embedded.
+            anchor: the raw anchor images batch.
+            positive: the raw positive images batch.
+            negative: the raw negative images batch.
         
         Returns:
-            out_embed: the image embedding batch.
+            anchor_embed: the embedded anchors batch.
+            positive_embed: the embedded positives batch.
+            negative_embed: the embedded negatives batch.
         '''
         
-        out_embed = self.patcher(x)
-        out_embed = self.cls_tokenizer(out_embed)
-        out_embed = self.pos_encoder(out_embed)
+        anchor_embed = self.patcher(anchor)
+        positive_embed = self.patcher(positive)
+        negative_embed = self.patcher(negative)
 
-        return out_embed
+        anchor_embed = self.anchor_cls_tokenizer(anchor_embed)
+        positive_embed = self.positive_cls_tokenizer(positive_embed)
+        negative_embed = self.negative_cls_tokenizer(negative_embed)
+
+        anchor_embed = self.anchor_pos_encoder(anchor_embed)
+        positive_embed = self.positive_pos_encoder(positive_embed)
+        negative_embed = self.negative_pos_encoder(negative_embed)
+
+
+        return anchor_embed, positive_embed, negative_embed
     
-    def _interpolate_pos_encoding(self, new_dim: int) -> torch.Tensor:
+    def _interpolate_pos_encoding(self, new_dim: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
         Interpolates the positional encoding parameter to prepare for fine-tuning on larger image data.
 
@@ -124,31 +145,67 @@ class Extractor(nn.Module):
             new_dim: the new image data dimension.
         
         Returns:
-            new_pos_embedding: the interpolated positional embedding.
+            anchor_new_pos_embedding: the new positional embedding for the anchor positional encoder.
+            positive_new_pos_embedding: the new positional embedding for the positive positional encoder.
+            negative_new_pos_embedding: the new positional embedding for the negative positional encoder.
         '''
 
         new_n_patches = self.patcher.get_num_patches(new_dim=new_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(new_dim=new_dim)[0]
-        old_n_patches = self.pos_encoder.pos_embedding.shape[1] - 1
+        old_n_patches = self.anchor_pos_encoder.pos_embedding.shape[1] - 1
 
         if new_n_patches == old_n_patches:
-            return self.pos_encoder.pos_embedding
+            return self.anchor_pos_encoder.pos_embedding, self.positive_pos_encoder.pos_embedding, self.negative_pos_encoder.pos_embedding
         
-        class_pos_embedding = self.pos_encoder.pos_embedding[:, 0]
-        old_patch_pos_embedding = self.pos_encoder.pos_embedding[:, 1:]
+        # interpolate anchor positional encoding weights
+        anchor_class_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 0]
+        anchor_old_patch_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 1:]
 
         old_size = int(math.sqrt(old_n_patches))
         new_size = int(math.sqrt(new_n_patches))
 
-        new_patch_pos_embedding = F.interpolate(
-            old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+        anchor_new_patch_pos_embedding = F.interpolate(
+            anchor_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
             size=(new_size, new_size),
             mode='bicubic'
         )
 
-        new_patch_pos_embedding = new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
-        new_pos_embedding = torch.cat((class_pos_embedding.unsqueeze(0), new_patch_pos_embedding), dim=1)
+        anchor_new_patch_pos_embedding = anchor_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        anchor_new_pos_embedding = torch.cat((anchor_class_pos_embedding.unsqueeze(0), anchor_new_patch_pos_embedding), dim=1)
 
-        return new_pos_embedding
+        # interpolate positive positional encoding weights
+        positive_class_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 0]
+        positive_old_patch_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 1:]
+
+        old_size = int(math.sqrt(old_n_patches))
+        new_size = int(math.sqrt(new_n_patches))
+
+        positive_new_patch_pos_embedding = F.interpolate(
+            positive_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+            size=(new_size, new_size),
+            mode='bicubic'
+        )
+
+        positive_new_patch_pos_embedding = positive_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        positive_new_pos_embedding = torch.cat((positive_class_pos_embedding.unsqueeze(0), positive_new_patch_pos_embedding), dim=1)
+
+        # interpolate negative positional encoding weights
+        negative_class_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 0]
+        negative_old_patch_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 1:]
+
+        old_size = int(math.sqrt(old_n_patches))
+        new_size = int(math.sqrt(new_n_patches))
+
+        negative_new_patch_pos_embedding = F.interpolate(
+            negative_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+            size=(new_size, new_size),
+            mode='bicubic'
+        )
+
+        negative_new_patch_pos_embedding = negative_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        negative_new_pos_embedding = torch.cat((negative_class_pos_embedding.unsqueeze(0), negative_new_patch_pos_embedding), dim=1)
+        
+        # return new positional embeddings
+        return anchor_new_pos_embedding, positive_new_pos_embedding, negative_new_pos_embedding
     
     def prepare_for_finetuning(self, new_dim: int) -> int:
         '''
@@ -164,10 +221,14 @@ class Extractor(nn.Module):
         assert new_dim % self.patch_dim == 0
 
         new_num_patches = self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]
-        self.pos_encoder.n_patches = new_num_patches
+        self.anchor_pos_encoder.n_patches = new_num_patches
+        self.positive_pos_encoder.n_patches = new_num_patches
+        self.negative_pos_encoder.n_patches = new_num_patches
 
-        new_pos_embedding = self._interpolate_pos_encoding(shape=(1, new_num_patches + 1, self.embed_dim), new_dim=self.in_dim)
-        self.pos_encoder.pos_embedding = nn.Parameter(new_pos_embedding)
+        anchor_pos_embedding, positive_pos_embedding, negative_pos_embedding = self._interpolate_pos_encoding(new_dim=self.in_dim)
+        self.anchor_pos_encoder.pos_embedding = nn.Parameter(anchor_pos_embedding)
+        self.positive_pos_encoder.pos_embedding = nn.Parameter(positive_pos_embedding)
+        self.negative_pos_encoder.pos_embedding = nn.Parameter(negative_pos_embedding)
 
         old_in_dim = self.in_dim
         self.in_dim = new_dim
@@ -189,13 +250,11 @@ class Extractor(nn.Module):
             negative: the negative image embeddings.
         '''
         
-        anchor = self._embed(anchor)
-        positive = self._embed(positive)
-        negative = self._embed(negative)
+        anchor, positive, negative = self._embed(anchor, positive, negative)
 
         for block in self.transformer_blocks:
             anchor = block(anchor)
-            anchor = self.cross_attn(anchor, positive) + self.cross_attn(anchor, negative)
+            anchor = self.positive_cross_attn(anchor, positive) + self.negative_cross_attn(anchor, negative)
 
             positive = block(positive)
             negative = block(negative)

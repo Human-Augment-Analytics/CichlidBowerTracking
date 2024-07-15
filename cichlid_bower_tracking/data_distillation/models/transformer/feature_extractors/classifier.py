@@ -1,3 +1,4 @@
+from typing import Optional
 from collections import OrderedDict
 
 from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
@@ -19,7 +20,7 @@ class Classifier(nn.Module):
             mlp_ratio: the size of the hidden layer in each transformer block's MLP, also used for scaling the MLP in the head of this classifier; defaults to 4.0.
         '''
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
 
         self.embed_dim = embed_dim
         self.num_heads = num_heads
@@ -72,12 +73,13 @@ class Classifier(nn.Module):
 
         return string
 
-    def prepare_for_finetuning(self, new_num_classes: int) -> int:
+    def prepare_for_finetuning(self, new_num_classes: int, new_mlp_ratio: Optional[float]=None) -> int:
         '''
         Prepares a pre-trained Classifier for fine-tuning by replacing the head of the MLP.
 
         Inputs:
             new_num_classes: the number of classes in the fine-tuning dataset.
+            new_mlp_ratio: the ratio to be used in resizing MLP hidden layers during fine-tuning.
 
         Returns:
             old_num_classes: the number of classes in the pre-training dataset.
@@ -90,19 +92,23 @@ class Classifier(nn.Module):
             old_params[name] = param.data.clone()
 
         new_mlp = nn.Sequential(
-            nn.Linear(in_features=self.embed_dim, out_features=int(self.embed_dim * self.mlp_ratio)),
-            nn.BatchNorm1d(num_features=int(self.embed_dim * self.mlp_ratio)),
+            nn.Linear(in_features=self.embed_dim, out_features=int(self.embed_dim * new_mlp_ratio)),
+            nn.BatchNorm1d(num_features=int(self.embed_dim * new_mlp_ratio)),
             nn.ReLU(),
-            nn.Linear(in_features=int(self.embed_dim * self.mlp_ratio), out_features=int(self.embed_dim * (self.mlp_ratio ** 2))),
-            nn.BatchNorm1d(num_features=int(self.embed_dim * (self.mlp_ratio ** 2))),
+            nn.Linear(in_features=int(self.embed_dim * self.mlp_ratio), out_features=int(self.embed_dim * (new_mlp_ratio ** 2))),
+            nn.BatchNorm1d(num_features=int(self.embed_dim * (new_mlp_ratio ** 2))),
             nn.ReLU(),
-            nn.Linear(in_features=int(self.embed_dim * (self.mlp_ratio ** 2)), out_features=new_num_classes)
+            nn.Linear(in_features=int(self.embed_dim * (new_mlp_ratio ** 2)), out_features=new_num_classes)
         )
 
         with torch.no_grad():
             for (_, old_param), (_, new_param) in zip(old_params.items(), new_mlp.named_parameters()):
                 if new_param.shape == old_param.shape:
                     new_param.copy_(old_param)
+                elif len(new_param.shape) == len(old_param.shape) == 2:
+                    min_in = min(old_param.shape[1], new_param.shape[1])
+                    min_out = min(old_param.shape[0], new_param.shape[0])
+                    new_param[:min_out, :min_in].copy_(old_param[:min_out, :min_in])
 
         self.mlp = new_mlp
         self.num_classes = new_num_classes
