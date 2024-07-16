@@ -1,8 +1,9 @@
 from typing import Union
 
-from embeddings.patch_transpose import PatchTranspose
-from embeddings.mini_patch_transpose import MiniPatchTranspose
-from transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.embeddings.patch_transpose import PatchTranspose
+from data_distillation.models.transformer.embeddings.mini_patch_transpose import MiniPatchTranspose
+
+from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
 
 import torch.nn as nn
 import torch

@@ -1,9 +1,10 @@
 from typing import Union
 
-from embeddings.patch_embedding import PatchEmbedding
-from embeddings.mini_patch_embedding import MiniPatchEmbedding
-from embeddings.positional_encoding import PositonalEncoding
-from transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
+from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
+from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
+
+from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
 
 import torch.nn as nn
 import torch

@@ -29,10 +29,10 @@ class ContrastiveLoss(nn.Module):
             z2: a PyTorch Tensor representing another batch of feature embeddings.
 
         Returns:
-            loss: the contrastive loss between each pair of feature embeddings in the batch.
+            loss: the mean-reduced contrastive loss between each pair of feature embeddings in the batch.
         '''
 
         distance = self.distance_metric(z1, z2)
-        contrastive_loss = (1 - y) * 0.5 * torch.pow(distance, 2) + 0.5 * y * torch.pow(F.relu(self.margin - distance), 2)
+        contrastive_loss = ((1 - y) * 0.5 * torch.pow(distance, 2) + 0.5 * y * torch.pow(F.relu(self.margin - distance), 2)).mean()
 
         return contrastive_loss

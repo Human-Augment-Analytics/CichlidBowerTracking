@@ -29,12 +29,12 @@ class TripletLoss(nn.Module):
             z_negative: the embedding of the negative image.
 
         Returns:
-            loss: the triplet loss between the three image embeddings.
+            loss: the mean-reduced triplet loss between the three image embeddings.
         '''
 
         sqr_distance_1 = torch.pow(F.pairwise_distance(z_anchor, z_positive, p=self.p_norm), self.p_norm)
         sqr_distance_2 = torch.pow(F.pairwise_distance(z_anchor, z_negative, p=self.p_norm), self.p_norm)
 
-        loss = F.relu(sqr_distance_1 - sqr_distance_2 + self.margin)
+        loss = F.relu(sqr_distance_1 - sqr_distance_2 + self.margin).mean()
 
         return loss

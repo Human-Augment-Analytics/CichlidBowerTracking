@@ -1,5 +1,5 @@
-from triplet_loss import TripletLoss
-from triplet_reconstruction_loss import TripletReconstructionLoss
+from data_distillation.losses.triplet_losses.triplet_reconstruction_loss import TripletReconstructionLoss
+from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
 
 import torch.nn as nn
 import torch

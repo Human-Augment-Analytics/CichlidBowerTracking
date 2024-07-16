@@ -1,10 +1,10 @@
-from contrastive_loss import ContrastiveLoss
-from pair_reconstruction_loss import PairReconstructionLoss
+from data_distillation.losses.pairwise_losses.pair_reconstruction_loss import PairReconstructionLoss
+from data_distillation.losses.pairwise_losses.contrastive_loss import ContrastiveLoss
 
 import torch.nn as nn
 import torch
 
-class SiameseLoss(nn.Module):
+class TotalSiameseLoss(nn.Module):
     def __init__(self, reconstruction_criterion: str, distance_metric: str, p_norm=2.0, distance_eps=1e-6, margin=1.0):
         '''
         Initializes an instance of the TotalSiameseLoss PyTorch module.
@@ -17,7 +17,7 @@ class SiameseLoss(nn.Module):
             margin: the value to be used for the margin hyperparameter of the contrastive loss; defaults to 1.0.
         '''
 
-        super(SiameseLoss, self).__init__()
+        super(TotalSiameseLoss, self).__init__()
 
         self.__version__ = '0.2.0'
 

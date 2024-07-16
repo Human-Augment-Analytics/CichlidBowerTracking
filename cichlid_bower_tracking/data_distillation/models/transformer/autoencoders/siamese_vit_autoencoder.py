@@ -2,14 +2,12 @@ from typing import Tuple
 
 from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
 from data_distillation.models.transformer.embeddings.patch_transpose import PatchTranspose
-
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
 from data_distillation.models.transformer.embeddings.mini_patch_transpose import MiniPatchTranspose
-
 from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
 
-from vit_encoder import ViTEncoder
-from vit_decoder import ViTDecoder
+from data_distillation.models.transformer.autoencoders.vit_encoder import ViTEncoder
+from data_distillation.models.transformer.autoencoders.vit_decoder import ViTDecoder
 
 import torch.nn as nn
 import torch

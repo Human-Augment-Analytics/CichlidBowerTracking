@@ -1,7 +1,7 @@
 from typing import Tuple
 
-from encoder import Encoder
-from decoder import Decoder
+from data_distillation.models.convolutional.encoder import Encoder
+from data_distillation.models.convolutional.decoder import Decoder
 
 import torch.nn as nn
 import torch
