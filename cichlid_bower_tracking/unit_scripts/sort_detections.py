@@ -197,7 +197,8 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     3. unmatched_trackers
     """
     if (len(trackers) == 0):
-        print(f'No SORT Kalman Filter predictions ({len(detections)} detections) :: {datetime.datetime.now()}')
+        # if len(detections) > 0:
+        #     print(f'No SORT Kalman filter predictions ({len(detections)} detections) :: {datetime.datetime.now()}')
 
         return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
 

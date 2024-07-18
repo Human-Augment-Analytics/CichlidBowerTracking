@@ -10,8 +10,9 @@ parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis sta
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
 parser.add_argument('--VideoIndex', nargs = '+', help = 'Restrict which videos to run the analysis on')
-parser.add_argument('--FPC', type=int, help='Specific to the "CollectBBoxes" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
+parser.add_argument('--FPC', type=int, help='Specific to the "ClipVideos" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
 parser.add_argument('--Dim', type=int, help='Specific to the "CollectBBoxes" option, this indicates what dimension should be used in resizing bbox images collected')
+parser.add_argument('--NonTransform', type=bool, default=False, help='Specific to the "CollectBBoxes" option, this indicates whether or not the BBoxCollector should transform collected bounded boxes to square shapes or save them in their original sizes')
 parser.add_argument('--Debug', type=bool, help='Runs the passed AnalysisType with debug modes on (if available)')
 
 args = parser.parse_args()
@@ -135,8 +136,10 @@ elif args.AnalysisType == 'ClipVideos':
 	commands = []
 	for videoIndex in videos:
 		py_command = ['python3', '-m', 'unit_scripts.clip_video', args.AnalysisID, args.ProjectID, f'{videoIndex}']
-		if args.FPC is not None:
-			py_command += ['--fpc', f'{args.FPC}']
+		
+		video_obj = fm_obj.returnVideoObject(int(videoIndex))
+		py_command += ['--fpc', str(video_obj.framerate)]
+
 		if args.Debug is not None:
 			py_command += ['--debug', f'{args.Debug}']
 
@@ -191,7 +194,7 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 		starting_frame_index = 0
 		for clip_file in clip_files:
-			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{args.VideoIndex}, 'f'{clip_index}', f'{starting_frame_index}']
+			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{args.VideoIndex}, 'f'{clip_index}', f'{starting_frame_index}', '--nontransform', args.NonTransform]
 			if args.Dim is not None:
 				py_command += ['--dim', f'{args.Dim}']
 			if args.Debug is not None:
@@ -218,7 +221,7 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 	# command_idx = 0
 	for p2 in processes:
-		p2.communicate()
+		p2.wait()
 
 		if p2.returncode != 0:
 			# raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')

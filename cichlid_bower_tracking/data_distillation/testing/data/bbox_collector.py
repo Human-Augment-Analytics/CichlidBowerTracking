@@ -24,7 +24,7 @@ IMG_H = 972
 # RESZ_DIM = 100
 
 class BBoxCollector:
-    def __init__(self, clip_file: str, detections_file: str, bboxes_dir: str, clip_index: int, starting_frame_index: int, dim=128, debug=False):
+    def __init__(self, clip_file: str, detections_file: str, bboxes_dir: str, clip_index: int, starting_frame_index: int, dim=128, sqr_bboxes=True, debug=False):
         '''
         Create and initialize an instance of the BBoxCollector class.
 
@@ -35,21 +35,24 @@ class BBoxCollector:
             clip_index: an int representing a clip number, solely used for naming saved BBox images.
             starting_frame_index: an int representing the index from the larger video at which the first frame of the clip is located.
             dim: an integer value indicating the dimension to be used as each resized bbox's width and height; defaults to 128.
+            sqr_bboxes: a Boolean indicating if bboxes should be resized to a square shape; defaults to True.
+            debug: a Boolean indicating if the BBoxCollector should be run in debug mode.
         '''
         
-        self.__version__ = '0.5.0'
+        self.__version__ = '0.6.0'
         self.clip_file = clip_file
         self.detections_file = detections_file
         self.bboxes_dir = bboxes_dir
         self.clip_index = clip_index
         self.starting_frame_idx = starting_frame_index
         self.dim = dim
+        self.sqr_bboxes = sqr_bboxes
         self.debug = debug
 
         # list to store each collected bbox, organized by frame
         self.bboxes = dict()
 
-    def _get_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int) -> torch.Tensor:
+    def _get_sqr_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int) -> torch.Tensor:
         '''
         Carves a PyTorch Tensor representing the bounding box centered at (x_center, y_center) with dimensions (width, height) out of the passed
         frame Tensor. The carved out bbox is slightly larger than necessary to ensure the entire fish body remains in the image after rotation.
@@ -81,12 +84,23 @@ class BBoxCollector:
         
         # get and return bbox by slicing passed frame
         bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]# .detach().numpy()
-        print(f'bbox shape: {bbox.shape}')
+        # print(f'bbox shape: {bbox.shape}')
 
         # img = PIL.Image.fromarray(bbox.transpose((2, 1, 0)))
         # img.save(os.path.join(self.bboxes_dir, 'test.png'))
 
         # bbox = torch.tensor(bbox, dtype=torch.uint8)
+        
+        return bbox
+
+    def _get_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int) -> torch.Tensor:
+        x_lo = x_center - (width // 2)
+        y_lo = y_center - (height // 2)
+
+        x_hi = x_center + (width // 2)
+        y_hi = y_center + (height // 2)
+
+        bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]
         
         return bbox
 
@@ -159,16 +173,19 @@ class BBoxCollector:
             mode_str: the interpolation mode to be used during bbox transformation; must be one of {'nearest', 'nearest_exact', 'bilinear'}, but defaults to 'bilinear'.
         '''
 
-        # pass frame through bbox extraction and transformation pipeline
-        bbox = self._get_bbox(frame, x_center, y_center, width, height)
-        # rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
-        resz_bbox = self._resize_bbox(bbox, mode_str).detach().numpy()
+        if self.sqr_bboxes:
+            # pass frame through bbox extraction and transformation pipeline
+            bbox = self._get_sqr_bbox(frame, x_center, y_center, width, height)
+            # rot_bbox = self._rotate_bbox(bbox, x_dot, y_dot, mode_str)
+            bbox = self._resize_bbox(bbox, mode_str).detach().numpy()
+        else:
+            bbox = self._get_bbox(frame, x_center, y_center, width, height).detach().numpy()
         
         # add bbox to dictionary of collected bboxes and return True to indicate success
         if frame_idx in list(self.bboxes.keys()):
-            self.bboxes[frame_idx].append(resz_bbox)
+            self.bboxes[frame_idx].append(bbox)
         else:
-            self.bboxes[frame_idx] = [resz_bbox]
+            self.bboxes[frame_idx] = [bbox]
             
     def _iterate(self, clip: torch.Tensor) -> None:
         '''
@@ -203,11 +220,10 @@ class BBoxCollector:
         '''
         Saves the collected bbox images to individual files in the directory located at self.bboxes_dir.
 
-        
-
         Inputs:
             imgtype: the file format to be used in saving the bbox images; defaults to "png".
         '''
+
         counts = dict()
 
         for frame_idx, bboxes_list in self.bboxes.items():
