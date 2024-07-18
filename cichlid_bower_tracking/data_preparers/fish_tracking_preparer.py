@@ -1,3 +1,5 @@
+from misc.pace_vars import USING_PACE
+
 import subprocess, os, pdb, datetime, shutil
 from shapely.geometry import Point, Polygon
 
@@ -76,7 +78,13 @@ class FishTrackingPreparer():
 		else:
 			raise Exception(f'FishTrackingPreparer Error: Missing anaconda distribution from {os.getenv("HOME")}')
 		
-		os.chdir(os.getenv('HOME') + '/CichlidBowerTracking/cichlid_bower_tracking')
+		# change directory
+		new_dir = os.getenv('HOME') + '/'
+		if USING_PACE:
+			new_dir += 'ondemand' + '/'
+		new_dir += '/CichlidBowerTracking/cichlid_bower_tracking'
+
+		os.chdir(new_dir)
 		print('Running Sort detection on ' + self.videoObj.baseName + ' ' + str(datetime.datetime.now()), flush = True)
 
 		command = ['python3', 'unit_scripts/sort_detections.py', self.annotations_dir + '/exp/labels/', self.videoObj.localFishDetectionsFile, self.videoObj.localFishTracksFile, self.videoObj.baseName]
@@ -84,6 +92,7 @@ class FishTrackingPreparer():
 		command = "source " + os.getenv('HOME') + f"/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidSort; " + ' '.join(command)
 		#subprocess.run('bash -c \"' + command + '\"', shell = True)
 
+		print('bash -c \"' + command + '\"')
 		output = subprocess.Popen('bash -c \"' + command + '\"', shell = True, stderr = open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingerrors.txt', 'w'), stdout=open(os.getenv('HOME') + '/' + self.videoObj.baseName + '_trackingstdout.txt', 'w'))
 		return output
 
