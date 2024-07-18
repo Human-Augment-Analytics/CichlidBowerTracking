@@ -73,6 +73,10 @@ def iou_batch(bb_test, bb_gt):
     wh = w * h
     o = wh / ((bb_test[..., 2] - bb_test[..., 0]) * (bb_test[..., 3] - bb_test[..., 1])
               + (bb_gt[..., 2] - bb_gt[..., 0]) * (bb_gt[..., 3] - bb_gt[..., 1]) - wh)
+
+    print(f'\nSample IoU values (first 5x5 or less) :: {datetime.datetime.now()}:')
+    sample_size = min(5, o.shape[0], o.shape[1])
+    print(f'{o[:sample_size, :sample_size]}\n')
         
     return (o)
 
@@ -193,7 +197,20 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     3. unmatched_trackers
     """
     if (len(trackers) == 0):
+        print(f'No SORT Kalman Filter predictions ({len(detections)} detections) :: {datetime.datetime.now()}')
+
         return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
+
+    if len(detections) > 0:
+        print(f'\nYOLOv5 detections (first 5 or less) :: {datetime.datetime.now()}:')
+        for i, det in enumerate(detections[:5]):
+            print(f'\t{i} : detection @ ({det[0]:.4f}, {det[1]:.4f}; {det[2]:.4f}, {det[3]:.4f})')
+    else:
+        print(f'No YOLOv5 detections ({len(trackers)} predictions) :: {datetime.datetime.now()}')
+
+    print(f'\nSORT Kalman filter predictions (first 5 or less) :: {datetime.datetime.now()}')
+    for i, prd in enumerate(trackers[:5]):
+        print(f'\t{i} : prediction @ ({prd[0]:.4f}, {prd[1]:.4f}; {prd[2]:.4f}, {prd[3]:.4f})')
 
     iou_matrix = iou_batch(detections, trackers)
     print(f'{iou_matrix.shape} IoU matrix shape :: {datetime.datetime.now()}')
