@@ -28,7 +28,7 @@ import torch
 
 class DataDistiller:
     def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], \
-                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str):
+                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -41,6 +41,7 @@ class DataDistiller:
             save_best_weights: a Boolean indicating whether or not the autoencoder's best training/validation weights should be saved (overwrites any currently saved weights at the same passed filepath).
             save_fp: a string representing the local filepath where the model's weights will be stored (only effective if save_best_weights = True).
             device: a string indicating the device on which training/validation and distillation will occur (should be either "cpu" or "gpu").
+            disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
         self.__version__ = '0.3.0'
@@ -68,6 +69,7 @@ class DataDistiller:
         self.save_fp = save_fp
 
         self.device = device
+        self.disable_progress_bar = disable_progress_bar
 
     def _train(self, epoch: int) -> Tuple[float]:
         '''
@@ -87,7 +89,7 @@ class DataDistiller:
 
         # condition on dataset type
         if self.use_pairwise_data:
-            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0)
+            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0, disable=self.disable_progress_bar)
 
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
@@ -126,7 +128,7 @@ class DataDistiller:
             return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
         
         elif self.use_triplet_data:
-            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0)
+            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0, disable=self.disable_progress_bar)
 
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
@@ -207,7 +209,7 @@ class DataDistiller:
         self.model.eval()
         with torch.no_grad():
             if self.use_pairwise_data:
-                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1)
+                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1, disable=self.disable_progress_bar)
 
                 # loop over dataloader to perform validation
                 epoch_tracker = EpochTracker()
@@ -241,7 +243,7 @@ class DataDistiller:
                 # return the epoch statistics as tracked by the EpochTracker             
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
             elif self.use_triplet_data:
-                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1)
+                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1, disable=self.disable_progress_bar)
 
                 # loop over dataloader to perform training
                 epoch_tracker = EpochTracker()
