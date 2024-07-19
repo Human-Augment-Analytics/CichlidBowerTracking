@@ -68,4 +68,11 @@ distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=va
                           nepochs=args.num_epochs, nclasses=args.num_classes, save_best_weights=False, save_fp='', device=args.device, disable_progress_bar=True)
 
 # perform training/validation
+
+start_time = time.time()
 distiller.run_main_loop()
+
+end_time = time.time()
+time_diff = start_time - end_time
+
+print(f'Time Difference: {time_diff} s')
