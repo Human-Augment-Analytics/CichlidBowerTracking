@@ -94,11 +94,25 @@ class BBoxCollector:
         return bbox
 
     def _get_bbox(self, frame: torch.Tensor, x_center: int, y_center: int, width: int, height: int) -> torch.Tensor:
-        x_lo = x_center - (width // 2)
-        y_lo = y_center - (height // 2)
+        '''
+        Carves out a bounding box in its original (non-square) shape and size.
 
-        x_hi = x_center + (width // 2)
-        y_hi = y_center + (height // 2)
+        Inputs:
+            frame: a PyTorch Tensor representing the frame containing the bbox.
+            x_center: the x-coordinate of the bbox's center.
+            y_center: the y-coordinate of the bbox's center.
+            width: the width of the bbox.
+            height: the height of the bbox.
+
+        Returns:
+            bbox: the bbox with center at (x_center, y_center) and shape (num_channels, width, height).
+        '''
+
+        x_lo = int(x_center - (width // 2))
+        y_lo = int(y_center - (height // 2))
+
+        x_hi = int(x_center + (width // 2))
+        y_hi = int(y_center + (height // 2))
 
         bbox = frame[:, x_lo:x_hi + 1, y_lo:y_hi + 1]
         
@@ -196,6 +210,7 @@ class BBoxCollector:
             video: PyTorch Tensor of shape (T, C, H, W) containing a video which has already been run through the YOLO + SORT pipeline.
         '''
         nframes = clip.shape[0]
+        # print(f'n_frames: {nframes}')
 
         # read tracks data from tracks file built by SortFish class
         detections_df = pd.read_csv(self.detections_file)
@@ -204,10 +219,11 @@ class BBoxCollector:
 
         # iterate by frame
         for _, row in detections_df.iterrows():
+            # print(f'frame: {row["frame"]}')
             frame_idx = row['frame'] - self.starting_frame_idx
 
-            x1, x2 = row['x1'], row['x2']
-            y1, y2 = row['y1'], row['y2']
+            x1, x2 = max(row['x1'], row['x2']), min(row['x1'], row['x2']) 
+            y1, y2 = max(row['y1'], row['y2']), min(row['y1'], row['y2'])
 
             width, height = x1 - x2 + 1, y1 - y2 + 1
             x_center, y_center = x2 + (width // 2), y2 + (height // 2)
@@ -240,8 +256,10 @@ class BBoxCollector:
                 # w, c, h = bbox_tensor.shape
                 # bbox_tensor = bbox_tensor.reshape(c, h, w)
                 
+                # print(f'frame_idx @ {frame_idx + self.starting_frame_idx} - {self.starting_frame_idx} + 1 == {frame_idx + 1}')
+
                 filename = f'clip{"0" * (9 - math.floor(1 + math.log10(self.clip_index + 1)))}{self.clip_index + 1}_'
-                filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx)))}{frame_idx}_'
+                filename += f'frame{"0" * (4 - math.floor(1 + math.log10(frame_idx + 1)))}{frame_idx + 1}_'
                 filename += f'n{counts[frame_idx]}'
 
                 # save_image(bbox_tensor, os.path.join(self.bboxes_dir, filename + f'.{imgtype}'), format=f'{imgtype}')

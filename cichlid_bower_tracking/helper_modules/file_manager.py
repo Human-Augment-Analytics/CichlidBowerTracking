@@ -82,12 +82,12 @@ class FileManager():
         elif analysis_type == 'CollectBBoxes':
             sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
             sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
-            sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
-            sub_dt = sub_dt[sub_dt.ClipVideos.str.upper() == 'TRUE']
+            # sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
+            # sub_dt = sub_dt[sub_dt.ClipVideos.str.upper() == 'TRUE']
         elif analysis_type == 'ClipVideos':
             sub_dt = sub_dt[sub_dt.StartingFiles.str.upper() == 'TRUE']
             sub_dt = sub_dt[sub_dt.Prep.str.upper() == 'TRUE']
-            sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
+            # sub_dt = sub_dt[sub_dt.TrackFish.str.upper() == 'TRUE']
 
         projectIDs = list(sub_dt[sub_dt[analysis_type].str.upper() == 'FALSE'].projectID) # Only run analysis on projects that need it        
         

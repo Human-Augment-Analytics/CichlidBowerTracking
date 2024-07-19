@@ -18,7 +18,7 @@ class VideoClipper:
             fpc: an int indicating the number of "frames per clip"; defaults to 1800, or 1 minute (assuming fps=30).
         '''
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.1.1'
         
         self.video_index = video_index
         self.video_file = video_file
@@ -108,4 +108,6 @@ class VideoClipper:
 
             self._save_clip(clip=clip)
             self.clip_count += 1
+
+            start_idx += spc
             

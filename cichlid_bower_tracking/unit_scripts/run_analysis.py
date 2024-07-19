@@ -1,6 +1,6 @@
 # Things to add
 
-import argparse, sys, pdb, subprocess, os
+import argparse, sys, pdb, subprocess, os, shutil
 from helper_modules.file_manager import FileManager as FM
 import pandas as pd
 
@@ -10,7 +10,7 @@ parser.add_argument('AnalysisID', type = str, help = 'The ID of the analysis sta
 parser.add_argument('ProjectID', type = str, help = 'Identify the projects you want to analyze.')
 parser.add_argument('--Workers', type = int, help = 'Number of workers to use to analyze data')
 parser.add_argument('--VideoIndex', nargs = '+', help = 'Restrict which videos to run the analysis on')
-parser.add_argument('--FPC', type=int, help='Specific to the "ClipVideos" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
+parser.add_argument('--FPC', type=int, default=150, help='Specific to the "ClipVideos" option, this indicates the number of frames per clip to be used in splitting up the larger video data')
 parser.add_argument('--Dim', type=int, help='Specific to the "CollectBBoxes" option, this indicates what dimension should be used in resizing bbox images collected')
 parser.add_argument('--NonTransform', type=bool, default=False, help='Specific to the "CollectBBoxes" option, this indicates whether or not the BBoxCollector should transform collected bounded boxes to square shapes or save them in their original sizes')
 parser.add_argument('--Debug', type=bool, help='Runs the passed AnalysisType with debug modes on (if available)')
@@ -138,7 +138,7 @@ elif args.AnalysisType == 'ClipVideos':
 		py_command = ['python3', '-m', 'unit_scripts.clip_video', args.AnalysisID, args.ProjectID, f'{videoIndex}']
 		
 		video_obj = fm_obj.returnVideoObject(int(videoIndex))
-		py_command += ['--fpc', str(video_obj.framerate)]
+		py_command += ['--fpc', str(args.FPC)]
 
 		if args.Debug is not None:
 			py_command += ['--debug', f'{args.Debug}']
@@ -185,16 +185,29 @@ elif args.AnalysisType == 'CollectBBoxes':
 	base_command = 'source ' + os.getenv('HOME') + f'/{conda_dir}/etc/profile.d/conda.sh; conda activate CichlidDistillation; '
 	commands = []
 
+	print('Constructing commands...')
+
 	clip_index = 0
 	for videoIndex in videos:
 		# print(f'videoIndex: {videoIndex}')
 
-		video_obj = fm_obj.returnVideoObject(videoIndex)
+		video_obj = fm_obj.returnVideoObject(int(videoIndex))
 		clip_files = os.listdir(video_obj.localVideoClipsDir)
+		clip_files.sort()
 
-		starting_frame_index = 0
+		# create local BBox Images storage directory for specified video
+		if os.path.exists(video_obj.localVideoBBoxImagesDir):
+			print(f'Cleaning out bbox images directory {video_obj.localVideoBBoxImagesDir.rstrip("/").split("/")[-1]}')
+
+			shutil.rmtree(video_obj.localVideoBBoxImagesDir)
+		else:
+			print(f'Creating bbox images directory {video_obj.localVideoBBoxImagesDir.rstrip("/").split("/")[-1]}')
+
+		fm_obj.createDirectory(video_obj.localVideoBBoxImagesDir)
+
+		starting_frame_index = 1
 		for clip_file in clip_files:
-			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{args.VideoIndex}, 'f'{clip_index}', f'{starting_frame_index}', '--nontransform', args.NonTransform]
+			py_command = ['python3', '-m', 'unit_scripts.collect_bboxes', args.AnalysisID, args.ProjectID, clip_file, f'{videoIndex}', f'{clip_index}', f'{starting_frame_index}', '--nontransform', str(args.NonTransform)]
 			if args.Dim is not None:
 				py_command += ['--dim', f'{args.Dim}']
 			if args.Debug is not None:
@@ -205,25 +218,21 @@ elif args.AnalysisType == 'CollectBBoxes':
 
 			commands.append('bash -c \"' + full_command + '\"')
 
+			clip_index += 1
 			if args.FPC is not None:
 				starting_frame_index += args.FPC
-
-		clip_index += 1
+			else:
+				starting_frame_index += video_obj.framerate * clip_index
 	
 	# execute stored collection commands for each video
-	# processes = []
-	# while len(commands) > 0:
-	# 	command = commands.pop(0)
-
-	# 	if len(processes) < 
-
-	processes = [subprocess.Popen(command, shell=True) for command in commands]
+	print('Executing commands...')
 
 	# command_idx = 0
-	for p2 in processes:
-		p2.wait()
+	for command in commands:
+		p1 = subprocess.Popen(command, shell=True)
+		p1.wait()
 
-		if p2.returncode != 0:
+		if p1.returncode != 0:
 			# raise Exception(f'BBox Collection Error: "{commands[command_idx]}" subprocess returned non-zero code')
 			raise Exception('BBox Collection Error')
 

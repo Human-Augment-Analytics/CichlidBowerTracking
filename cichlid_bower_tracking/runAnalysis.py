@@ -58,7 +58,7 @@ while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
     # dynamically construct command
-    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID, '--NonTransform', args.NonTransform]
+    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID, '--NonTransform', str(args.NonTransform)]
     if args.VideoIndex is not None:
         command += ['--VideoIndex', f'{args.VideoIndex}']
     if args.FPC is not None:
