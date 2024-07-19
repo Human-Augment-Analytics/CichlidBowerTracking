@@ -1,6 +1,6 @@
 import argparse, os, shutil
 
-from data_distillation.data.video_clipper import VideoClipper
+from data_distillation.testing.data.video_clipper import VideoClipper
 from helper_modules.file_manager import FileManager
 
 # get necessary arguments for using VideoClipper

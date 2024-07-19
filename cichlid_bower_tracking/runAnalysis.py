@@ -16,10 +16,10 @@ parser.add_argument('--Workers', type=int, help='Number of workers')
 parser.add_argument('--VideoIndex', type=int, help='The index of the video to be analyzed.')
 parser.add_argument('--FPC', type=int, help='Indicates the number of frames per clip; specific to the "CollectBBoxes" AnalysisType')
 parser.add_argument('--Dim', type=int, help='Indicates the dimension that should be used in resizing collected bbox images; specific to the "CollectBBoxes" AnalysisType')
+parser.add_argument('--NonTransform', type=bool, default=False, help='Tells the BBoxCollector whether or not it should transform collected bboxes to a square shape before saving; specific to the "CollectBBoxes" AnalysisType.')
 parser.add_argument('--Debug', type=bool, help='Runs the analysis with debug modes on')
 parser.add_argument('--Delete', default=False, action='store_true', help='Deletes the data after completing the analysis.')
 args = parser.parse_args()
-
 
 # Identify projects to run analysis on
 fm_obj = FM(args.AnalysisID)
@@ -58,7 +58,7 @@ while len(projectIDs) != 0:
     projectID = projectIDs.pop(0)
 
     # dynamically construct command
-    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID]
+    command = ['python3', '-m', 'unit_scripts.run_analysis', args.AnalysisType, args.AnalysisID, projectID, '--NonTransform', str(args.NonTransform)]
     if args.VideoIndex is not None:
         command += ['--VideoIndex', f'{args.VideoIndex}']
     if args.FPC is not None:
