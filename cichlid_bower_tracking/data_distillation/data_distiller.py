@@ -319,9 +319,10 @@ class DataDistiller:
 
         # loop through passed number of epochs
         for epoch in range(self.nepochs):
-            print('\n' + '-' * 93)
-            print(f'EPOCH [{epoch}/{self.nepochs}]')
-            print('-' * 93)
+            if not self.disable_progress_bar:
+                print('\n' + '-' * 93)
+                print(f'EPOCH [{epoch}/{self.nepochs}]')
+                print('-' * 93)
 
             # perform training on current epoch
             if not isinstance(self.model, TCAiT):
@@ -355,9 +356,11 @@ class DataDistiller:
                     best_model = copy.deepcopy(self.model)
         
         # final print statement
-        print('\n' + '=' * 93)
+        if not self.disable_progress_bar:
+            print('\n' + '=' * 93)
         print(f'BEST VALIDATION MODEL {"LOSS" if not isinstance(self.model, TCAiT) else "ACCURACY"}: {best_valid_avg:.4f}')
-        print('=' * 93 + '\n')
+        if not self.disable_progress_bar:
+            print('=' * 93 + '\n')
 
         # return the best model
         return best_model
