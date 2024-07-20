@@ -5,6 +5,7 @@ from data_distillation.models.transformer.feature_extractors.triplet_cross_atten
 from data_distillation.models.transformer.feature_extractors.extractor import Extractor
 
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss as TCLoss
+from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
 
 from data_distillation.testing.data.test_triplets import TestTriplets
 from data_distillation.data_distiller import DataDistiller, ddp_setup
@@ -84,14 +85,17 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating T-CAiT model...')
     
-    if args.model == 'tcait':
-        model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
-                      in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
-                      extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride,
-                      extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, 
-                      extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
-    elif args.model == 'tcait-extractor':
-        model = Extractor()
+    model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
+                in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
+                extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride,
+                extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, 
+                extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
+    
+    if args.model == 'tcait-extractor':
+        model = model.extractor
+    elif args.model == 'tcait-classifier':
+        model.freeze_extractor()
+
     # create optimizer
     if args.debug:
         print('Creating optimizer...')
@@ -102,7 +106,12 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating loss function...')
 
-    loss_fn = TCLoss()
+    if args.model == 'tcait':
+        loss_fn = TCLoss()
+    elif args.model == 'tcait-extractor':
+        loss_fn = TripletLoss()
+    else:
+        loss_fn = nn.CrossEntropyLoss()
 
     # create data distiller
     if args.debug:

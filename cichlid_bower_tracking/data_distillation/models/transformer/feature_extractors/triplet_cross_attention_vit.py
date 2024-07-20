@@ -69,6 +69,26 @@ class TripletCrossAttentionViT(nn.Module):
         string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":50s} | {self.num_params:35d}\n'
 
         return string
+    
+    def _unfreeze_extractor(self) -> None:
+        '''
+        Unfreezes the parameters in the extractor.
+
+        Inputs: None.
+        '''
+
+        for param in self.extractor.parameters():
+            param.requires_grad = True
+    
+    def freeze_extractor(self) -> None:
+        '''
+        Freezes the parameters in the extractor.
+
+        Inputs: None.
+        '''
+
+        for param in self.extractor.parameters():
+            param.requires_grad = False
 
     def save_weights(self, filepath: str) -> None:
         '''
@@ -79,11 +99,40 @@ class TripletCrossAttentionViT(nn.Module):
         '''
 
         filedir = filepath.rstrip('/ ').split('/')[:-1]
-        assert os.path.exists(filedir)
+        assert os.path.exists(filedir), f'Invalid filepath: filedir {filedir} does not exist!'
 
         print(f'Saving model weights to {filepath}...')
         torch.save(self.state_dict(), filepath)
-        print(f'Model saved successfully to {filepath}!')
+        print(f'Model weights saved successfully to {filepath}!')
+
+    def save_extractor_weights(self, filepath: str) -> None:
+        '''
+        Saves the weights of just the extractor component to the passed filepath.
+
+        Inputs:
+            filepath: a system path to the file where the extractor weights will be saved.
+        '''
+
+        filedir = filepath.rstrip('/ ').split('/')[:-1]
+        assert os.path.exists(filedir), f'Invalid filepath: filedir {filedir} does not exist!'
+
+        print(f'Saving extractor weights to {filepath}...')
+        torch.save(self.extractor.state_dict(), filepath)
+        print(f'Extractor weights saved successfully to {filepath}!')
+    
+    def load_extractor_weights(self, filepath: str) -> None:
+        '''
+        Loads the extractor weights stored at the passed filepath into the extractor.
+
+        Inputs:
+            filepath: a system path to the file where the extractor weights are saved.
+        '''
+
+        assert os.path.exists(filepath), f'Invalid filepath: {filepath} does not exist!'
+
+        print(f'Loading extractor weights from {filepath}...')
+        self.extractor.load_state_dict(torch.load(filepath))
+        print(f'Extractor weights loaded successfully from {filepath}!')
 
     def prepare_for_finetuning(self, new_dim: int, new_num_classes: int, new_mlp_ratio: float) -> None:
         '''
