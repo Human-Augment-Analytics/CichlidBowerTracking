@@ -7,11 +7,12 @@ import torch
 import random
 
 class TestTriplets(Dataset):
-    def __init__(self, batch_size=16, num_batches=10, num_channels=3, dim=224, num_classes=2):
+    def __init__(self, num_examples=300, batch_size=16, num_batches=10, num_channels=3, dim=224, num_classes=2):
         '''
         Initializes an instance of the TestTriplets dataset class.
 
         Inputs:
+            num_examples: the number of triplet pairs to have in the "dataset"; defaults to 300.
             batch_size: the number of images per batch in the wrapping DataLoader; defaults to 16.
             num_batches: the number of image batches to be created; defaults to 10.
             num_channels: the number of channels to include in each image (1 for greyscale, 3 for RGB); defaults to 3.
@@ -21,23 +22,23 @@ class TestTriplets(Dataset):
 
         self.__version__ = '0.1.0'
 
+        self.num_examples = num_examples
         self.batch_size = batch_size
         self.num_batches = num_batches
         self.num_channels = num_channels
         self.dim = dim
-
         self.num_classes = num_classes
 
     def __len__(self) -> int:
         '''
-        Returns the number of "images" in the dataset.
+        Returns the number of "images" in the dataset; if self.num_examples is valid, return this, otherwise return (self.batch_size * self.num_batches). 
 
         Inputs: None.
         
-        Returns: self.batch_size * self.num_batches.
+        Returns: (self.batch_size * self.num_batches) if self.num_examples is invalid, otherwise return self.num_examples.
         '''
 
-        return self.batch_size * self.num_batches
+        return (self.batch_size * self.num_batches) if self.num_examples < 1 else self.num_examples
     
     def __getitem__(self, index: int) -> Tuple:
         '''
