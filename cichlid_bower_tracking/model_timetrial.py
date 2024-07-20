@@ -15,8 +15,10 @@ import torch
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
-parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help='The number of batches to be used by the training \"dataset\".')
-parser.add_argument('--num-valid-batches', '-t', type=int, default=32657, help='The number of batches to be used by the testing \"dataset\".')
+parser.add_argument('--num-train-examples', '-t', type=int, default=11797632, help='The number of examples to be used by the training \"dataset\".')
+parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
+parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help='The number of batches to be used by the training \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
+parser.add_argument('--num-valid-batches', '-V', type=int, default=23657, help='The number o batches to be used by the validation \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
 parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
 parser.add_argument('--num-extractor-heads', '-X', type=int, default=12, help='The number of attention heads to use in the extractor; defaults to 12.')
@@ -38,11 +40,9 @@ parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The nu
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device', '-w', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device to use during training; defaults to \'gpu\'.')                    
-<<<<<<< HEAD
 parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
-=======
 parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
->>>>>>> 4ae20e9ce84ebe87aab5474aa8bb79f3c77d34f3
+parser.add_argument('--disable-progress-bar', default=False, action='store_true', help='Indicates that no progress bar should be printed out during the training/validation processes.')
 
 args = parser.parse_args()
 
@@ -50,10 +50,10 @@ args = parser.parse_args()
 if args.debug:
     print('Creating testing and validaton datasets...')
 
-train_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_train_batches, num_channels=args.channels,
-                             dim=args.dim, num_classes=args.num_classes)
-valid_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_valid_batches, num_channels=args.channels, 
-                             dim=args.dim, num_classes=args.num_classes)
+train_dataset = TestTriplets(num_examples=args.num_train_examples, batch_size=args.batch_size, num_batches=args.num_train_batches, 
+                             num_channels=args.channels, dim=args.dim, num_classes=args.num_classes)
+valid_dataset = TestTriplets(num_examples=args.num_valid_examples, batch_size=args.batch_size, num_batches=args.num_valid_batches,
+                             num_channels=args.channels, dim=args.dim, num_classes=args.num_classes)
 
 # create dataloaders
 if args.debug:
@@ -89,7 +89,7 @@ if args.debug:
     print('Creating data distiller...')
 
 distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer,
-                          nepochs=args.num_epochs, nclasses=args.num_classes, save_best_weights=False, save_fp='', device=args.device, disable_progress_bar=True)
+                          nepochs=args.num_epochs, nclasses=args.num_classes, save_best_weights=False, save_fp='', device=args.device, disable_progress_bar=args.disable_progress_bar)
 
 # perform training/validation
 if args.debug:
@@ -99,6 +99,6 @@ start_time = time.time()
 distiller.run_main_loop()
 
 end_time = time.time()
-time_diff = start_time - end_time
+time_diff = end_time - start_time
 
-print(f'\nTime Difference: {time_diff} s')
+print(f'\nTime Difference: {time_diff:.4f} s')
