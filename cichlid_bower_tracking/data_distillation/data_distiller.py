@@ -6,9 +6,12 @@ from data_distillation.models.convolutional.triplet_autoencoder import TripletAu
 
 from data_distillation.models.transformer.autoencoders.siamese_vit_autoencoder import SiameseViTAutoencoder
 from data_distillation.models.transformer.autoencoders.triplet_vit_autoencoder import TripletViTAutoencoder
+
+from data_distillation.models.transformer.feature_extractors.extrator import Extractor
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 
 from data_distillation.losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss
+from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
 from data_distillation.losses.triplet_losses.total_triplet_loss import TotalTripletLoss
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss
 
@@ -21,21 +24,23 @@ from data_distillation.testing.data.test_triplets import TestTriplets
 from data_distillation.testing.metrics.accuracy import Accuracy
 
 from torch.utils.data import DataLoader
-from torch.nn.parallel import DistributedDataParallel as DPP
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 
 import torch.optim as optim
 import torch.nn as nn
 import torch
 
-def dpp_setup(rank, world_size):
+def ddp_setup(rank, world_size):
     '''
-    Sets up Distributed Data Parallel (DPP)
+    Sets up Distributed Data Parallel (DDP)
 
     Inputs:
         rank: unique identifier.
         world_size: total number of processes.
     '''
+
+    torch.cuda.set_device(rank)
 
     os.environ['MASTER_ADDR'] = 'localhost'
     os.environ['MASTER_PORT'] = '12355'
@@ -43,8 +48,8 @@ def dpp_setup(rank, world_size):
     init_process_group(backend='nccl', rank=rank, world_size=world_size)
 
 class DataDistiller:
-    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss], \
-                 optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, gpu_id: int, dpp=False, disable_progress_bar=False):
+    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, Extractor], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss], \
+                 optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -62,7 +67,7 @@ class DataDistiller:
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
-        self.__version__ = '0.3.0'
+        self.__version__ = '0.5.0'
 
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
@@ -70,14 +75,15 @@ class DataDistiller:
         assert device in ['gpu', 'cpu'], f'Invalid device: needed \"cpu\" or \"gpu\", got \"{device}\".'
         
         self.device = device
-        self.dpp = dpp
+        self.ddp = ddp
         self.gpu_id = gpu_id
 
-        if self.device == 'gpu' and torch.cuda.is_available() and not self.dpp:
+        self.model = model
+        if self.device == 'gpu' and torch.cuda.is_available() and not self.ddp:
             self.model = self.model.to(self.gpu_id)
-        elif self.device == 'gpu' and torch.cuda.is_available() and self.dpp:
+        elif self.device == 'gpu' and torch.cuda.is_available() and self.ddp:
             self.model = self.model.to(self.gpu_id)
-            self.model = DPP(self.model, device_ids=[self.gpu_id])
+            self.model = DDP(self.model, device_ids=[self.gpu_id])
 
         self.loss_fn = loss_fn
         self.optimizer = optimizer
@@ -131,6 +137,8 @@ class DataDistiller:
                 # depending on model type, expect different outputs from forward pass
                 if isinstance(self.model, SiameseAutoencoder) or isinstance(self.model, SiameseViTAutoencoder):
                     z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
+                elif self.ddp and (isinstance(self.model.module, SiameseAutoencoder) or isinstance(self.model.module, SiameseViTAutoencoder)):
+                    z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
                 else: # if/when necessary, add more model types in elif-statements
                     raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
 
@@ -178,7 +186,18 @@ class DataDistiller:
 
                     y_prob = torch.softmax(Y, dim=1)
                     y_pred = y_prob.argmax(dim=1)
+                elif self.ddp and isinstance(self.model.module, TCAiT):
+                    z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
+
+                    y_prob = torch.softmax(Y, dim=1)
+                    y_pred = y_prob.argmax(dim=1)
+                elif isinstance(self.model, Extractor):
+                    z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
+                elif self.ddp and isinstance(self.model.module, Extractor):
+                    z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
                 elif isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
+                    z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
+                elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                     z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                 else: # if/when necessary, add more model types in elif-statements
                     raise Exception(f'Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
@@ -189,6 +208,8 @@ class DataDistiller:
                     acc = metric(y_pred, y).item()
 
                     acc_tracker.add(acc)
+                elif isinstance(self.loss_fn, TripletLoss):
+                    loss = self.loss_fn(z_anchor, z_positive, z_negative)
                 elif isinstance(self.loss_fn, TotalTripletLoss):
                     loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                 else: # if/when necessary, add more loss functions in elif-statements
@@ -250,10 +271,12 @@ class DataDistiller:
                         y = y.to(self.gpu_id)
 
                     # depending on model type, expect different outputs from forward pass
-                    if isinstance(self.model, SiameseAutoencoder):
+                    if isinstance(self.model, SiameseAutoencoder) or isinstance(self.model, SiameseViTAutoencoder):
+                        z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
+                    elif self.ddp and (isinstance(self.model.module, SiameseAutoencoder) or isinstance(self.model.module, SiameseViTAutoencoder)):
                         z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception('Invalid model type: must be SiameseAutoencoder.')
+                        raise Exception('Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TotalSiameseLoss):
@@ -293,17 +316,30 @@ class DataDistiller:
 
                         y_prob = torch.softmax(Y, dim=1)
                         y_pred = y_prob.argmax(dim=1)
+                    elif self.ddp and isinstance(self.model.module, TCAiT):
+                        z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
+
+                        y_prob = torch.softmax(Y, dim=1)
+                        y_pred = y_prob.argmax(dim=1)
+                    elif isinstance(self.model, Extractor):
+                        z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
+                    elif self.ddp and isinstance(self.model.module, Extractor):
+                        z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
                     elif isinstance(self.model, TripletAutoencoder) or isinstance(self.model, TripletViTAutoencoder):
                         z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
+                    elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
+                        z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception('Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
-
+                        raise Exception(f'Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
+                    
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TripletClassificationLoss):
                         loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
                         acc = metric(y_pred, y).item()
 
                         acc_tracker.add(acc)
+                    elif isinstance(self.loss_fn, TripletLoss):
+                        loss = self.loss_fn(z_anchor, z_positive, z_negative)
                     elif isinstance(self.loss_fn, TotalTripletLoss):
                         loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                     else: # if/when necessary, add more loss functions in elif-statements
@@ -327,7 +363,7 @@ class DataDistiller:
             else:
                 raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
-    def _main_loop(self) -> Union[nn.Module, DPP]:
+    def _main_loop(self) -> Union[nn.Module, DDP]:
         '''
         Performs the main training/validation loop for self.model.
 
@@ -417,7 +453,7 @@ class DataDistiller:
         best_model = self._main_loop()
 
         if self.save_best_weights:
-            if not self.dpp:
+            if not self.ddp:
                 save_flag = self._save_model_weights(best_model=best_model)
             else:
                 save_flag = self._save_model_weights(best_model=best_model.module)
