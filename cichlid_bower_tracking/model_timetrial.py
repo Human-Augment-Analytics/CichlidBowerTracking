@@ -19,8 +19,8 @@ parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help=
 parser.add_argument('--num-valid-batches', '-t', type=int, default=32657, help='The number of batches to be used by the testing \"dataset\".')
 parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
-parser.add_argument('--num-extractor-heads', '-H', type=int, default=12, help='The number of attention heads to use in the extractor; defaults to 12.')
-parser.add_argument('--num-classifier-heads', '-h', type=int, default=12, help='The number of attention heads to use in the classifier; defaults to 12.')
+parser.add_argument('--num-extractor-heads', '-X', type=int, default=12, help='The number of attention heads to use in the extractor; defaults to 12.')
+parser.add_argument('--num-classifier-heads', '-C', type=int, default=12, help='The number of attention heads to use in the classifier; defaults to 12.')
 parser.add_argument('--channels', '-c', type=int, choices=[1, 3], default=3, help='The number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.')
 parser.add_argument('--dim', '-b', type=int, default=224, help='The dimension of the images; defaults to 224.')
 parser.add_argument('--extractor-depth', '-D', type=int, default=8, help='The number of transformer blocks to include in the extractor; defaults to 8.')
@@ -34,24 +34,38 @@ parser.add_argument('--patch-kernel-size', '-k', type=int, default=3, help='The 
 parser.add_argument('--patch-stride', '-s', type=int, default=2, help='The stride to be used in the mini-patch embedding (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 2.')
 parser.add_argument('--patch-ratio', '-P', type=float, default=8.0, help='The rate at which the number of channels in the mini-patcher increases (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 8.0.')
 parser.add_argument('--patch-ratio-decay', '-x', type=float, default=0.5, help='The rate at which the \"--patch-ratio\"/\"-P\" value decays (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 0.5.')
-parser.add_argument('--patch-num-convs', '-C', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
-parser.add_argument('--use-minipatch', '-u', default=False, action='set_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
+parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
+parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device', '-w', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device to use during training; defaults to \'gpu\'.')                    
+<<<<<<< HEAD
 parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
+=======
+parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
+>>>>>>> 4ae20e9ce84ebe87aab5474aa8bb79f3c77d34f3
 
 args = parser.parse_args()
 
-# create datasets and dataloaders
+# create datasets
+if args.debug:
+    print('Creating testing and validaton datasets...')
+
 train_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_train_batches, num_channels=args.channels,
                              dim=args.dim, num_classes=args.num_classes)
-valid_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_batches, num_channels=args.channels,
-                            dim=args.dim, num_classes=args.num_classes)
+valid_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_valid_batches, num_channels=args.channels, 
+                             dim=args.dim, num_classes=args.num_classes)
+
+# create dataloaders
+if args.debug:
+    print('Creating training and validaton dataloaders...')
 
 train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
 valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
 
 # create T-CAiT model
+if args.debug:
+    print('Creating T-CAiT model...')
+
 model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
               in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
               extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride,
@@ -59,16 +73,27 @@ model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extrac
               extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
 
 # create optimizer
+if args.debug:
+    print('Creating optimizer...')
+
 optimizer = optim.Adam(params=model.parameters())
 
 # create loss function
+if args.debug:
+    print('Creating loss function...')
+
 loss_fn = TCLoss()
 
 # create data distiller
+if args.debug:
+    print('Creating data distiller...')
+
 distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer,
                           nepochs=args.num_epochs, nclasses=args.num_classes, save_best_weights=False, save_fp='', device=args.device, disable_progress_bar=True)
 
 # perform training/validation
+if args.debug:
+    print('Performing testing and validaton...')
 
 start_time = time.time()
 distiller.run_main_loop()
@@ -76,4 +101,4 @@ distiller.run_main_loop()
 end_time = time.time()
 time_diff = start_time - end_time
 
-print(f'Time Difference: {time_diff} s')
+print(f'\nTime Difference: {time_diff} s')
