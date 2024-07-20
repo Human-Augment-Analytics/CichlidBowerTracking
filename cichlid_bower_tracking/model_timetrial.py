@@ -38,6 +38,7 @@ parser.add_argument('--patch-num-convs', '-C', type=int, default=5, help='The nu
 parser.add_argument('--use-minipatch', '-u', default=False, action='set_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device', '-w', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device to use during training; defaults to \'gpu\'.')                    
+parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
 
 args = parser.parse_args()
 
@@ -47,8 +48,8 @@ train_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_tr
 valid_dataset = TestTriplets(batch_size=args.batch_size, num_batches=args.num_batches, num_channels=args.channels,
                             dim=args.dim, num_classes=args.num_classes)
 
-train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size)
-valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size)
+train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
+valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size, num_workers=args.num_workers)
 
 # create T-CAiT model
 model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
