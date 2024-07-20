@@ -2,10 +2,12 @@ from typing import Tuple
 import argparse, time
 
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
+from data_distillation.models.transformer.feature_extractors.extractor import Extractor
+
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss as TCLoss
 
 from data_distillation.testing.data.test_triplets import TestTriplets
-from data_distillation.data_distiller import DataDistiller, dpp_setup
+from data_distillation.data_distiller import DataDistiller, ddp_setup
 
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.distributed import DistributedSampler
@@ -19,6 +21,7 @@ import torch
 # parse arguments
 parser = argparse.ArgumentParser()
 
+parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier'], help='The type of model to be used during training and validation.')
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
 parser.add_argument('--num-train-examples', '-t', type=int, default=11797632, help='The number of examples to be used by the training \"dataset\".')
 parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
@@ -43,7 +46,7 @@ parser.add_argument('--patch-ratio', '-P', type=float, default=8.0, help='The ra
 parser.add_argument('--patch-ratio-decay', '-x', type=float, default=0.5, help='The rate at which the \"--patch-ratio\"/\"-P\" value decays (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 0.5.')
 parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
-parser.add_argument('--use-dpp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
+parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device-type', '-i', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device type to use during training/validation; defaults to \'gpu\'.')                    
 parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
@@ -54,12 +57,12 @@ args = parser.parse_args()
 
 # define main function
 def main(gpu_id: int, world_size: int):
-    # setup dpp (if desired)
-    if args.use_dpp:
+    # setup DDP (if desired)
+    if args.use_ddp:
         if args.debug:
-            print('Setting up DPP...')
-        
-        dpp_setup(rank=gpu_id, world_size=world_size)
+            print('Setting up DDP...')
+
+        ddp_setup(rank=gpu_id, world_size=world_size)
 
     # create datasets
     if args.debug:
@@ -74,19 +77,21 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating training and validaton dataloaders...')
 
-    train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True,sampler=DistributedSampler(dataset=train_dataset) if args.use_dpp else None)
-    valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True, sampler=DistributedSampler(dataset=valid_dataset) if args.use_dpp else None)
+    train_dataloader = DataLoader(dataset=train_dataset, batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True,sampler=DistributedSampler(dataset=train_dataset) if args.use_ddp else None)
+    valid_dataloader = DataLoader(dataset=valid_dataset, batch_size=args.batch_size, num_workers=args.num_workers, pin_memory=True, sampler=DistributedSampler(dataset=valid_dataset) if args.use_ddp else None)
 
     # create T-CAiT model
     if args.debug:
         print('Creating T-CAiT model...')
-
-    model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
-                in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
-                extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride,
-                extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, 
-                extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
     
+    if args.model == 'tcait':
+        model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
+                      in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
+                      extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride,
+                      extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, 
+                      extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
+    elif args.model == 'tcait-extractor':
+        model = Extractor()
     # create optimizer
     if args.debug:
         print('Creating optimizer...')
@@ -104,7 +109,7 @@ def main(gpu_id: int, world_size: int):
         print('Creating data distiller...')
 
     distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer, nepochs=args.num_epochs, nclasses=args.num_classes,
-                            save_best_weights=False, save_fp='', device=args.device, gpu_id=0, dpp=args.use_dpp, disable_progress_bar=args.disable_progress_bar)
+                            save_best_weights=False, save_fp='', device=args.device_type, gpu_id=gpu_id, ddp=args.use_ddp, disable_progress_bar=args.disable_progress_bar)
 
     # perform training/validation
     if args.debug:
@@ -118,18 +123,16 @@ def main(gpu_id: int, world_size: int):
 
     print(f'\nTime Difference: {time_diff:.4f} s')
 
-    # destroy dpp processes (if necessary)
-    if args.dpp:
+    # destroy DDP processes (if necessary)
+    if args.ddp:
         if args.debug:
-            print('Shutting down DPP...')
+            print('Shutting down DDP...')
 
         destroy_process_group()
 
 if __name__ == '__main__':
-    if args.use_dpp:
+    if args.use_ddp:
         world_size = torch.cuda.device_count()
-        gpu_id = 0
-
-        mp.spawn(main, args=(gpu_id, world_size), nprocs=world_size)
+        mp.spawn(main, args=(world_size, ), nprocs=world_size)
     else:
         main(gpu_id=0, world_size=1)
