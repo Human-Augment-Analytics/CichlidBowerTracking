@@ -1,6 +1,5 @@
 from typing import Tuple, Union
-import copy
-import tqdm
+import copy, tqdm, os
 
 from data_distillation.models.convolutional.siamese_autoencoder import SiameseAutoencoder
 from data_distillation.models.convolutional.triplet_autoencoder import TripletAutoencoder
@@ -22,13 +21,30 @@ from data_distillation.testing.data.test_triplets import TestTriplets
 from data_distillation.testing.metrics.accuracy import Accuracy
 
 from torch.utils.data import DataLoader
+from torch.nn.parallel import DistributedDataParallel as DPP
+from torch.distributed import init_process_group
+
 import torch.optim as optim
 import torch.nn as nn
 import torch
 
+def dpp_setup(rank, world_size):
+    '''
+    Sets up Distributed Data Parallel (DPP)
+
+    Inputs:
+        rank: unique identifier.
+        world_size: total number of processes.
+    '''
+
+    os.environ['MASTER_ADDR'] = 'localhost'
+    os.environ['MASTER_PORT'] = '12355'
+
+    init_process_group(backend='nccl', rank=rank, world_size=world_size)
+
 class DataDistiller:
-    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], \
-                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, disable_progress_bar=False):
+    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss], \
+                 optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, gpu_id: int, dpp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -40,7 +56,9 @@ class DataDistiller:
             nepochs: an integer indicating the number of epochs over which training/validation will be performed.
             save_best_weights: a Boolean indicating whether or not the autoencoder's best training/validation weights should be saved (overwrites any currently saved weights at the same passed filepath).
             save_fp: a string representing the local filepath where the model's weights will be stored (only effective if save_best_weights = True).
-            device: a string indicating the device on which training/validation and distillation will occur (should be either "cpu" or "gpu").
+            device: a string indicating the device on which training/validation and distillation will occur (must be either "cpu" or "gpu").
+            gpu_id: a string representing the gpu_id to be used.
+            ddp: indicates that the model should be wrapped in a DDP object.
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
@@ -49,7 +67,18 @@ class DataDistiller:
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
 
-        self.model = model
+        assert device in ['gpu', 'cpu'], f'Invalid device: needed \"cpu\" or \"gpu\", got \"{device}\".'
+        
+        self.device = device
+        self.dpp = dpp
+        self.gpu_id = gpu_id
+
+        if self.device == 'gpu' and torch.cuda.is_available() and not self.dpp:
+            self.model = self.model.to(self.gpu_id)
+        elif self.device == 'gpu' and torch.cuda.is_available() and self.dpp:
+            self.model = self.model.to(self.gpu_id)
+            self.model = DPP(self.model, device_ids=[self.gpu_id])
+
         self.loss_fn = loss_fn
         self.optimizer = optimizer
 
@@ -68,7 +97,6 @@ class DataDistiller:
         self.save_best_weights = save_best_weights
         self.save_fp = save_fp
 
-        self.device = device
         self.disable_progress_bar = disable_progress_bar
 
     def _train(self, epoch: int) -> Tuple[float]:
@@ -96,9 +124,9 @@ class DataDistiller:
             for batch, (x1, x2, y) in enumerate(loop):
                 # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
-                    x1 = x1.cuda()
-                    x2 = x2.cuda()
-                    y = y.cuda()
+                    x1 = x1.to(self.gpu_id)
+                    x2 = x2.to(self.gpu_id)
+                    y = y.to(self.gpu_id)
 
                 # depending on model type, expect different outputs from forward pass
                 if isinstance(self.model, SiameseAutoencoder) or isinstance(self.model, SiameseViTAutoencoder):
@@ -139,10 +167,10 @@ class DataDistiller:
             for batch, (anchor, positive, negative, y) in enumerate(loop):
                 # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
-                    anchor = anchor.cuda()
-                    positive = positive.cuda()
-                    negative = negative.cuda()
-                    y = y.cuda()
+                    anchor = anchor.to(self.gpu_id)
+                    positive = positive.to(self.gpu_id)
+                    negative = negative.to(self.gpu_id)
+                    y = y.to(self.gpu_id)
                 
                 # depending on model type, expect different outputs from forward pass
                 if isinstance(self.model, TCAiT):
@@ -217,9 +245,9 @@ class DataDistiller:
                 for batch, (x1, x2, y) in enumerate(loop):
                     # move to CUDA if requested (and able)
                     if self.device == 'gpu' and torch.cuda.is_available():
-                        x1 = x1.cuda()
-                        x2 = x2.cuda()
-                        y = y.cuda()
+                        x1 = x1.to(self.gpu_id)
+                        x2 = x2.to(self.gpu_id)
+                        y = y.to(self.gpu_id)
 
                     # depending on model type, expect different outputs from forward pass
                     if isinstance(self.model, SiameseAutoencoder):
@@ -254,10 +282,10 @@ class DataDistiller:
                 for batch, (anchor, positive, negative, y) in enumerate(loop):
                     # move to CUDA if requested (and able)
                     if self.device == 'gpu' and torch.cuda.is_available():
-                        anchor = anchor.cuda()
-                        positive = positive.cuda()
-                        negative = negative.cuda()
-                        y = y.cuda()
+                        anchor = anchor.to(self.gpu_id)
+                        positive = positive.to(self.gpu_id)
+                        negative = negative.to(self.gpu_id)
+                        y = y.to(self.gpu_id)
                     
                     # depending on model type, expect different outputs from forward pass
                     if isinstance(self.model, TCAiT):
@@ -299,7 +327,7 @@ class DataDistiller:
             else:
                 raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
-    def _main_loop(self) -> nn.Module:
+    def _main_loop(self) -> Union[nn.Module, DPP]:
         '''
         Performs the main training/validation loop for self.model.
 
@@ -308,10 +336,6 @@ class DataDistiller:
         Returns:
             best_model: a PyTorch model representing a copy of the best model observed during validation.
         '''
-
-        # move model to CUDA if requested (and able)
-        if self.device == 'gpu' and torch.cuda.is_available():
-            self.model = self.model.cuda()
 
         # keep track of best average validation loss and best model weights
         best_valid_avg = float('inf')
@@ -393,7 +417,10 @@ class DataDistiller:
         best_model = self._main_loop()
 
         if self.save_best_weights:
-            save_flag = self._save_model_weights(best_model=best_model)
+            if not self.dpp:
+                save_flag = self._save_model_weights(best_model=best_model)
+            else:
+                save_flag = self._save_model_weights(best_model=best_model.module)
 
             if save_flag:
                 print('\tSave successful!')
