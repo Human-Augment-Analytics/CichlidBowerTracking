@@ -1,8 +1,10 @@
+from data_distillation.models.transformer.attention_mechs.spatial_reduction_attention import SpatialReductionAttention as SRA
+
 import torch.nn as nn
 import torch
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0):
+    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0, use_sra=False, sr_ratio=2):
         '''
         Initializes an instance of the TransformerEncoder class.
 
@@ -11,6 +13,8 @@ class TransformerEncoder(nn.Module):
             n_heads: the number of heads to be used by the Multi-Head Attention.
             p_dropout: the dropout probability parameter; defaults to 0.1.
             mlp_ratio: indicates the size of the MLP's hidden layer relative to the embedding dimension; defaults to 4.0.
+            use_sra: indicates that SRA should be used instead of standard self-attention; defaults to False.
+            sr_ratio: the spatial reduction ratio used by SRA; defaults to 2.
         '''
 
         super(TransformerEncoder, self).__init__()
@@ -21,9 +25,13 @@ class TransformerEncoder(nn.Module):
         self.nheads = n_heads
         self.p_dropout = p_dropout
         self.mlp_ratio = mlp_ratio
+        self.use_sra = use_sra
+        self.sr_ratio = sr_ratio
 
         self.norm1 = nn.LayerNorm(normalized_shape=self.embed_dim)
-        self.mha = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout)
+        self.attention = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout) if not self.use_sra \
+            else SRA(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.p_dropout, sr_ratio=self.sr_ratio)
+        
         self.norm2 = nn.LayerNorm(normalized_shape=self.embed_dim)
         self.mlp = nn.Sequential(
             nn.Linear(in_features=self.embed_dim, out_features=int(self.embed_dim * self.mlp_ratio)),
@@ -44,7 +52,7 @@ class TransformerEncoder(nn.Module):
         '''
 
         out1 = self.norm1(x)
-        out1, _ = self.mha(out1, out1, out1)
+        out1, _ = self.attention(out1, out1, out1)
 
         out1 += x
 
