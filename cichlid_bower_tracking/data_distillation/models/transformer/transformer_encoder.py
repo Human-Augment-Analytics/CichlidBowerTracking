@@ -1,10 +1,11 @@
 from data_distillation.models.transformer.attention_mechs.spatial_reduction_attention import SpatialReductionAttention as SRA
+from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 
 import torch.nn as nn
 import torch
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0, use_sra=False, sr_ratio=2):
+    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0, use_sra=False, sr_ratio=2, in_dim=224):
         '''
         Initializes an instance of the TransformerEncoder class.
 
@@ -28,9 +29,12 @@ class TransformerEncoder(nn.Module):
         self.use_sra = use_sra
         self.sr_ratio = sr_ratio
 
+        if self.use_sra:
+            self.pos_enc = PositionalEncoding()
+
         self.norm1 = nn.LayerNorm(normalized_shape=self.embed_dim)
         self.attention = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout) if not self.use_sra \
-            else SRA(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.p_dropout, sr_ratio=self.sr_ratio)
+            else SRA(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout, sr_ratio=self.sr_ratio)
         
         self.norm2 = nn.LayerNorm(normalized_shape=self.embed_dim)
         self.mlp = nn.Sequential(
