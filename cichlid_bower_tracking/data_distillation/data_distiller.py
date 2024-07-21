@@ -7,7 +7,7 @@ from data_distillation.models.convolutional.triplet_autoencoder import TripletAu
 from data_distillation.models.transformer.autoencoders.siamese_vit_autoencoder import SiameseViTAutoencoder
 from data_distillation.models.transformer.autoencoders.triplet_vit_autoencoder import TripletViTAutoencoder
 
-from data_distillation.models.transformer.feature_extractors.extrator import Extractor
+from data_distillation.models.transformer.feature_extractors.extractor import Extractor
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 
 from data_distillation.losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss
@@ -48,7 +48,7 @@ def ddp_setup(rank, world_size):
     init_process_group(backend='nccl', rank=rank, world_size=world_size)
 
 class DataDistiller:
-    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, Extractor], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss], \
+    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, Extractor], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], \
                  optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, save_fp: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
@@ -200,7 +200,7 @@ class DataDistiller:
                 elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                     z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                 else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
+                    raise Exception(f'Invalid model type: must be TCAiT, Extractor, TripletAutoencoder, or TripletViTAutoencoder.')
 
                 # calculate loss using passed loss_fn
                 if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -210,10 +210,15 @@ class DataDistiller:
                     acc_tracker.add(acc)
                 elif isinstance(self.loss_fn, TripletLoss):
                     loss = self.loss_fn(z_anchor, z_positive, z_negative)
+                elif isinstance(self.loss_fn, nn.CrossEntropyLoss):
+                    loss = self.loss_fn(y_prob, y)
+                    acc = metric(y_pred, y).item()
+
+                    acc_tracker.add(acc)
                 elif isinstance(self.loss_fn, TotalTripletLoss):
                     loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                 else: # if/when necessary, add more loss functions in elif-statements
-                    raise Exception(f'Invalid loss type: must be TotalTripletLoss or TripletClassificationLoss.')
+                    raise Exception(f'Invalid loss type: must be TotalTripletLoss, TripletClassificationLoss, TripletLoss, or CrossEntropyLoss.')
 
                 # backward pass
                 loss.backward()
@@ -330,7 +335,7 @@ class DataDistiller:
                     elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                         z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception(f'Invalid model type: must be TCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
+                        raise Exception(f'Invalid model type: must be TCAiT, Extractor, TripletAutoencoder, or TripletViTAutoencoder.')
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -340,10 +345,15 @@ class DataDistiller:
                         acc_tracker.add(acc)
                     elif isinstance(self.loss_fn, TripletLoss):
                         loss = self.loss_fn(z_anchor, z_positive, z_negative)
+                    elif isinstance(self.loss_fn, nn.CrossEntropyLoss):
+                        loss = self.loss_fn(y_prob, y)
+                        acc = metric(y_pred, y).item()
+
+                        acc_tracker.add(acc)
                     elif isinstance(self.loss_fn, TotalTripletLoss):
                         loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                     else: # if/when necessary, add more loss functions in elif-statements
-                        raise Exception('Invalid loss type: must be TotalTripletLoss or TripletClassificationLoss.')
+                        raise Exception('Invalid loss type: must be TotalTripletLoss, TripletClassificationLoss, TripletLoss, or CrossEntropyLoss.')
 
                     # loss value tracking with EpochTracker
                     epoch_tracker.add(loss.item())

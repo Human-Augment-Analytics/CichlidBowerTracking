@@ -30,8 +30,8 @@ parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help=
 parser.add_argument('--num-valid-batches', '-V', type=int, default=23657, help='The number o batches to be used by the validation \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
 parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
-parser.add_argument('--num-extractor-heads', '-X', type=int, default=12, help='The number of attention heads to use in the extractor; defaults to 12.')
-parser.add_argument('--num-classifier-heads', '-C', type=int, default=12, help='The number of attention heads to use in the classifier; defaults to 12.')
+parser.add_argument('--num-extractor-heads', '-X', type=int, default=8, help='The number of attention heads to use in the extractor; defaults to 12.')
+parser.add_argument('--num-classifier-heads', '-C', type=int, default=8, help='The number of attention heads to use in the classifier; defaults to 12.')
 parser.add_argument('--channels', '-c', type=int, choices=[1, 3], default=3, help='The number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.')
 parser.add_argument('--dim', '-b', type=int, default=224, help='The dimension of the images; defaults to 224.')
 parser.add_argument('--extractor-depth', '-D', type=int, default=8, help='The number of transformer blocks to include in the extractor; defaults to 8.')
@@ -96,6 +96,9 @@ def main(gpu_id: int, world_size: int):
     elif args.model == 'tcait-classifier':
         model.freeze_extractor()
 
+    if args.debug:
+        print(model)
+
     # create optimizer
     if args.debug:
         print('Creating optimizer...')
@@ -133,7 +136,7 @@ def main(gpu_id: int, world_size: int):
     print(f'\nTime Difference: {time_diff:.4f} s')
 
     # destroy DDP processes (if necessary)
-    if args.ddp:
+    if args.use_ddp:
         if args.debug:
             print('Shutting down DDP...')
 
