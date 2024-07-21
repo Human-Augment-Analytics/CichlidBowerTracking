@@ -30,8 +30,8 @@ parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help=
 parser.add_argument('--num-valid-batches', '-V', type=int, default=23657, help='The number o batches to be used by the validation \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
 parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
-parser.add_argument('--num-extractor-heads', '-X', type=int, default=12, help='The number of attention heads to use in the extractor; defaults to 12.')
-parser.add_argument('--num-classifier-heads', '-C', type=int, default=12, help='The number of attention heads to use in the classifier; defaults to 12.')
+parser.add_argument('--num-extractor-heads', '-X', type=int, default=8, help='The number of attention heads to use in the extractor; defaults to 12.')
+parser.add_argument('--num-classifier-heads', '-C', type=int, default=8, help='The number of attention heads to use in the classifier; defaults to 12.')
 parser.add_argument('--channels', '-c', type=int, choices=[1, 3], default=3, help='The number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.')
 parser.add_argument('--dim', '-b', type=int, default=224, help='The dimension of the images; defaults to 224.')
 parser.add_argument('--extractor-depth', '-D', type=int, default=8, help='The number of transformer blocks to include in the extractor; defaults to 8.')
@@ -48,8 +48,8 @@ parser.add_argument('--patch-ratio-decay', '-x', type=float, default=0.5, help='
 parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
-parser.add_argument('--use-sra', '-s', default=False, action='store_true', help='Indicates whether the extractor should use SRA instead of standard self-attention.')
-parser.add_argument('--extractor-sr-ratio', '-S', type=int, default=2, help='The spatial reduction ratio to be used by the model; defaults to 2.')
+parser.add_argument('--use-sra', '-a', default=False, action='store_true', help='Indicates whether the extractor should use SRA instead of standard self-attention.')
+parser.add_argument('--extractor-sr-ratio', '-A', type=int, default=2, help='The spatial reduction ratio to be used by the model; defaults to 2.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device-type', '-i', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device type to use during training/validation; defaults to \'gpu\'.')                    
 parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
@@ -89,14 +89,17 @@ def main(gpu_id: int, world_size: int):
     
     model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
                 in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
-                extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride, extractor_sr_ratio=args.extractor_sr_ratio
-                extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, extractor_use_sra=args.use_sra
+                extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride, extractor_sr_ratio=args.extractor_sr_ratio,
+                extractor_patch_ratio=args.patch_ratio, extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, extractor_use_sra=args.use_sra,
                 extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
     
     if args.model == 'tcait-extractor':
         model = model.extractor
     elif args.model == 'tcait-classifier':
         model.freeze_extractor()
+
+    if args.debug:
+        print(model)
 
     # create optimizer
     if args.debug:
@@ -135,7 +138,7 @@ def main(gpu_id: int, world_size: int):
     print(f'\nTime Difference: {time_diff:.4f} s')
 
     # destroy DDP processes (if necessary)
-    if args.ddp:
+    if args.use_ddp:
         if args.debug:
             print('Shutting down DDP...')
 
