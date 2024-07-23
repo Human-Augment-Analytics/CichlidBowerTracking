@@ -44,9 +44,9 @@ class TripletCrossAttentionViT(nn.Module):
         
         self.__version__ = '0.1.1'
 
-        self.extractor = TCAiTExtractor(embed_dim=embed_dim, num_heads=num_extractor_heads, in_channels=in_channels, in_dim=in_dim, depth=extractor_depth, dropout=extractor_dropout, sr_ratio=extractor_sr_ratio, \
+        self.extractor = TCAiTExtractor(embed_dim=embed_dim, num_heads=num_extractor_heads, in_channels=in_channels, in_dim=in_dim, depth=extractor_depth, dropout=extractor_dropout, \
                                    mlp_ratio=extractor_mlp_ratio, patch_dim=extractor_patch_dim, patch_kernel_size=extractor_patch_kernel_size, patch_stride=extractor_patch_stride, \
-                                   patch_ratio=extractor_patch_ratio, patch_ratio_decay=extractor_patch_ratio_decay, patch_n_convs=extractor_patch_n_convs, use_minipatch=extractor_use_minipatch, use_sra=extractor_use_sra)
+                                   patch_ratio=extractor_patch_ratio, patch_ratio_decay=extractor_patch_ratio_decay, patch_n_convs=extractor_patch_n_convs, use_minipatch=extractor_use_minipatch)
         self.classifier = TCAiTClassifier(embed_dim=embed_dim, num_heads=num_classifier_heads, num_classes=num_classes, depth=classifier_depth, dropout=classifier_dropout, mlp_ratio=classifier_mlp_ratio)
 
     def __str__(self) -> str:

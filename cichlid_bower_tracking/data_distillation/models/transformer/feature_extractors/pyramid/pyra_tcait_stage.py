@@ -264,6 +264,9 @@ class PyraTCAiTStage(nn.Module):
             negative = block(negative)
 
         anchor = self.positive_cross_attn(anchor, positive) + self.negative_cross_attn(anchor, negative)
-        z_anchor, z_positive, z_negative = self._reshape_output(anchor), self._reshape_output(positive), self._reshape_output(negative)
+        
+        z_anchor = self._reshape_output(anchor) if not self.add_cls else anchor
+        z_positive = self._reshape_output(positive) if not self.add_cls else positive
+        z_negative = self._reshape_output(negative) if not self.add_cls else negative
 
         return z_anchor, z_positive, z_negative
