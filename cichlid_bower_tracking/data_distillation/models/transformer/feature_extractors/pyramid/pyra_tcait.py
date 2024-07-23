@@ -11,7 +11,7 @@ import math
 class PyraTCAiT(nn.Module):
     def __init__(self, embed_dims: List[int], head_counts: List[int], mlp_ratios: List[int], sr_ratios: List[int], depths: List[int], num_stages=4, dropout=0.1, first_patch_dim=4, in_channels=3, in_dim=224, add_classifier=True, num_classes: Optional[int]=None):
         '''
-        Initializes an instance of the PyraTCAiT class.
+        Initializes an instance of the PyraTCAiT class; inspired by "Pyramid Vision Transformer: A Versatile Backbone for Dense Prediction without Convolutions" by Wang et al. (2021.)
 
         Inputs:
             embed_dims: a list of embedding dimensions for each stage.
@@ -165,7 +165,7 @@ class PyraTCAiT(nn.Module):
             z_negative: the embedded negative batch.
             pred: the output of the MLP classifier head if self.add_classifier is True, otherwise None. 
         '''
-        
+
         for stage in self.stages:
             anchor, positive, negative = stage(anchor, positive, negative)
 
