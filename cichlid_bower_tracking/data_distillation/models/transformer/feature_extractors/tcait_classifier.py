@@ -1,12 +1,12 @@
 from typing import Optional
 from collections import OrderedDict
 
-from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.transformer_block import TransformerBlock
 
 import torch.nn as nn
 import torch
 
-class Classifier(nn.Module):
+class TCAiTClassifier(nn.Module):
     def __init__(self, embed_dim: int, num_heads: int, num_classes: int, depth=2, dropout=0.1, mlp_ratio=4.0):
         '''
         Initializes and instance of the Classifier class.
@@ -20,7 +20,7 @@ class Classifier(nn.Module):
             mlp_ratio: the size of the hidden layer in each transformer block's MLP, also used for scaling the MLP in the head of this classifier; defaults to 4.0.
         '''
 
-        super(Classifier, self).__init__()
+        super(TCAiTClassifier, self).__init__()
 
         self.__version__ = '0.1.2'
 
@@ -32,7 +32,7 @@ class Classifier(nn.Module):
         self.dropout = dropout
         self.mlp_ratio = mlp_ratio
 
-        self.blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
+        self.blocks = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
 
         self.mlp = nn.Sequential(
             nn.Linear(in_features=self.embed_dim, out_features=int(self.embed_dim * self.mlp_ratio)),

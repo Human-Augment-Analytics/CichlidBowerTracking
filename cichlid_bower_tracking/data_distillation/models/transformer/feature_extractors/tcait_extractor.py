@@ -7,15 +7,15 @@ from data_distillation.models.transformer.embeddings.positional_encoding import 
 from data_distillation.models.transformer.embeddings.cls_tokens import CLSTokens
 
 from data_distillation.models.transformer.attention_mechs.cross_attention import CrossAttention
-from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.transformer_block import TransformerBlock
 
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
 
-class Extractor(nn.Module):
-    def __init__(self, embed_dim: int, num_heads: int, in_channels=3, in_dim=256, depth=8, dropout=0.1, mlp_ratio=4.0, sr_ratio: Optional[int]=2, patch_dim: Optional[int]=16, patch_kernel_size: Optional[int]=3, \
-                 patch_stride: Optional[int]=2, patch_ratio: Optional[float]=8.0, patch_ratio_decay: Optional[float]=0.5, patch_n_convs: Optional[int]=5, use_minipatch=False, use_sra=False):
+class TCAiTExtractor(nn.Module):
+    def __init__(self, embed_dim: int, num_heads: int, in_channels=3, in_dim=256, depth=8, dropout=0.1, mlp_ratio=4.0, patch_dim: Optional[int]=16, patch_kernel_size: Optional[int]=3, \
+                 patch_stride: Optional[int]=2, patch_ratio: Optional[float]=8.0, patch_ratio_decay: Optional[float]=0.5, patch_n_convs: Optional[int]=5, use_minipatch=False):
         '''
         Initializes an instance of the Extractor class.
 
@@ -26,7 +26,6 @@ class Extractor(nn.Module):
             in_dim: the size of the input image(s); defaults to 256.
             depth: the number of encoder blocks to be used (depth - 1 if mini-patch embedding, otherwise depth); defaults to 8.
             dropout: the dropout to be used by the self-attention and cross attention mechanisms; defaults to 0.1.
-            sr_ratio: the spatial reduction ratio used by SRA; defaults to 2.
             mlp_ratio: the size of the hidden layer of each transformer block's MLP, relative to the embed_dim; defaults to 4.
             patch_dim: the patch size to be used in standard patch embedding; defaults to 16 (only effective if use_minipatch is False).
             patch_kernel_size: the kernel size to be used in mini-patch embedding; defaults to 3 (only effective if use_minipatch is True).
@@ -35,10 +34,9 @@ class Extractor(nn.Module):
             patch_ratio_decay: the rate at which the patch_ratio decays in mini-patch embedding; defaults to 0.5 (only effective if use_minipatch is True).
             patch_n_convs: the number of convolutions to be used in mini-patch embedding; defaults to 5 (only effective if use_minipatch is True).
             use_minipatch: indicates whether or not mini-patch embedding is used instead of standard patch embedding; defaults to False.
-            use_sra: indicates whether SRA should be used in place of standard self-attention; defaults to False.
         '''
 
-        super(Extractor, self).__init__()
+        super(TCAiTExtractor, self).__init__()
         
         self.__version__ = '0.2.1'
 
@@ -51,7 +49,6 @@ class Extractor(nn.Module):
         self.depth = depth if not use_minipatch else (depth - 1)
         self.dropout = dropout
         self.mlp_ratio = mlp_ratio
-        self.sr_ratio = sr_ratio
         
         self.patch_dim = patch_dim
         self.patch_kernel_size = patch_kernel_size
@@ -60,7 +57,6 @@ class Extractor(nn.Module):
         self.patch_ratio_decay = patch_ratio_decay
         self.patch_n_convs = patch_n_convs
         
-        self.use_sra = use_sra
         self.use_minipatch = use_minipatch
         if not self.use_minipatch:
             self.patcher = PatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, patch_dim=self.patch_dim)
@@ -77,7 +73,7 @@ class Extractor(nn.Module):
         self.positive_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
         self.negative_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
 
-        self.transformer_blocks = nn.Sequential(*[TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=(self.use_sra and i % 2 == 1), sr_ratio=self.sr_ratio) for i in range(self.depth)])
+        self.transformer_blocks = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=(self.use_sra and i % 2 == 1), sr_ratio=self.sr_ratio) for i in range(self.depth)])
         
         self.positive_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
         self.negative_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
@@ -140,7 +136,6 @@ class Extractor(nn.Module):
         anchor_embed = self.anchor_pos_encoder(anchor_embed)
         positive_embed = self.positive_pos_encoder(positive_embed)
         negative_embed = self.negative_pos_encoder(negative_embed)
-
 
         return anchor_embed, positive_embed, negative_embed
     
@@ -261,9 +256,9 @@ class Extractor(nn.Module):
 
         for block in self.transformer_blocks:
             anchor = block(anchor)
-            anchor = self.positive_cross_attn(anchor, positive) + self.negative_cross_attn(anchor, negative)
-
             positive = block(positive)
             negative = block(negative)
+
+        anchor = self.positive_cross_attn(anchor, positive) + self.negative_cross_attn(anchor, negative)
 
         return anchor, positive, negative

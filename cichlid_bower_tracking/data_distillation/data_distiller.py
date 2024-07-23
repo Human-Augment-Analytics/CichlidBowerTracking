@@ -7,7 +7,7 @@ from data_distillation.models.convolutional.triplet_autoencoder import TripletAu
 from data_distillation.models.transformer.autoencoders.siamese_vit_autoencoder import SiameseViTAutoencoder
 from data_distillation.models.transformer.autoencoders.triplet_vit_autoencoder import TripletViTAutoencoder
 
-from data_distillation.models.transformer.feature_extractors.extractor import Extractor
+from data_distillation.models.transformer.feature_extractors.tcait_extractor import Extractor
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 
 from data_distillation.losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss

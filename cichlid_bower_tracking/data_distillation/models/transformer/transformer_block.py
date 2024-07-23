@@ -4,8 +4,8 @@ from data_distillation.models.transformer.embeddings.positional_encoding import 
 import torch.nn as nn
 import torch
 
-class TransformerEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0, use_sra=False, sr_ratio=2, in_dim=224):
+class TransformerBlock(nn.Module):
+    def __init__(self, embed_dim: int, n_heads: int, p_dropout=0.1, mlp_ratio=4.0, use_sra=False, sr_ratio=2):
         '''
         Initializes an instance of the TransformerEncoder class.
 
@@ -18,9 +18,9 @@ class TransformerEncoder(nn.Module):
             sr_ratio: the spatial reduction ratio used by SRA; defaults to 2.
         '''
 
-        super(TransformerEncoder, self).__init__()
+        super(TransformerBlock, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.2.0'
         
         self.embed_dim = embed_dim
         self.nheads = n_heads
@@ -29,13 +29,8 @@ class TransformerEncoder(nn.Module):
         self.use_sra = use_sra
         self.sr_ratio = sr_ratio
 
-        if self.use_sra:
-            self.pos_enc = PositionalEncoding()
-
         self.norm1 = nn.LayerNorm(normalized_shape=self.embed_dim)
-        self.attention = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout) if not self.use_sra \
-            else SRA(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout, sr_ratio=self.sr_ratio)
-        
+        self.attention = nn.MultiheadAttention(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout) if not self.use_sra else SRA(embed_dim=self.embed_dim, num_heads=self.nheads, dropout=self.p_dropout, sr_ratio=self.sr_ratio)
         self.norm2 = nn.LayerNorm(normalized_shape=self.embed_dim)
         self.mlp = nn.Sequential(
             nn.Linear(in_features=self.embed_dim, out_features=int(self.embed_dim * self.mlp_ratio)),

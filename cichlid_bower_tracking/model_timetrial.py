@@ -2,7 +2,7 @@ from typing import Tuple
 import argparse, time
 
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
-from data_distillation.models.transformer.feature_extractors.extractor import Extractor
+from data_distillation.models.transformer.feature_extractors.tcait_extractor import Extractor
 
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss as TCLoss
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
@@ -48,8 +48,7 @@ parser.add_argument('--patch-ratio-decay', '-x', type=float, default=0.5, help='
 parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
-parser.add_argument('--use-sra', '-a', default=False, action='store_true', help='Indicates whether the extractor should use SRA instead of standard self-attention.')
-parser.add_argument('--extractor-sr-ratio', '-A', type=int, default=2, help='The spatial reduction ratio to be used by the model; defaults to 2.')
+parser.add_argument('--use-sra', '-S', default=False, action='store_true', help='Indicates whether the extractor should use SRA instead of standard self-attention.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--device-type', '-i', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device type to use during training/validation; defaults to \'gpu\'.')                    
 parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')

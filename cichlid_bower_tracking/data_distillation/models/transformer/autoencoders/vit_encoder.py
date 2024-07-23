@@ -4,7 +4,7 @@ from data_distillation.models.transformer.embeddings.patch_embedding import Patc
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
 from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
 
-from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.transformer_block import TransformerBlock
 
 import torch.nn as nn
 import torch
@@ -41,7 +41,7 @@ class ViTEncoder(nn.Module):
         self.use_minipatch = isinstance(self.patcher, MiniPatchEmbedding)
         self.nencoders = (n_encoders - 1) if self.use_minipatch else n_encoders
         
-        self.encoder_stack = [TransformerEncoder(embed_dim=embed_dim, n_heads=n_heads, p_dropout=self.p_dropout,mlp_ratio=self.mlp_ratio) for _ in range(self.nencoders)]
+        self.encoder_stack = [TransformerBlock(embed_dim=embed_dim, n_heads=n_heads, p_dropout=self.p_dropout,mlp_ratio=self.mlp_ratio) for _ in range(self.nencoders)]
 
         self.norm = nn.LayerNorm(self.embed_dim)
 

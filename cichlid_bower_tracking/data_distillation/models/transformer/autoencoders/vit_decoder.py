@@ -3,7 +3,7 @@ from typing import Union
 from data_distillation.models.transformer.embeddings.patch_transpose import PatchTranspose
 from data_distillation.models.transformer.embeddings.mini_patch_transpose import MiniPatchTranspose
 
-from data_distillation.models.transformer.transformer_encoder import TransformerEncoder
+from data_distillation.models.transformer.transformer_block import TransformerBlock
 
 import torch.nn as nn
 import torch
@@ -37,7 +37,7 @@ class ViTDecoder(nn.Module):
         self.use_minipatch = isinstance(self.transposer, MiniPatchTranspose)
         self.ndecoders = (n_decoders - 1) if self.use_minipatch else n_decoders
 
-        self.decoder_stack = [TransformerEncoder(embed_dim=self.embed_dim, n_heads=self.nheads, p_dropout=self.p_dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.nencoders)]
+        self.decoder_stack = [TransformerBlock(embed_dim=self.embed_dim, n_heads=self.nheads, p_dropout=self.p_dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.nencoders)]
         self.norm = nn.LayerNorm(self.embed_dim)
 
         self.transposer = transposer

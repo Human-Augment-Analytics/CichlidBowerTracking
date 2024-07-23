@@ -3,8 +3,8 @@ import os
 from typing import Optional, Tuple
 from collections import OrderedDict
 
-from data_distillation.models.transformer.feature_extractors.extractor import Extractor
-from data_distillation.models.transformer.feature_extractors.classifier import Classifier
+from data_distillation.models.transformer.feature_extractors.tcait_extractor import TCAiTExtractor
+from data_distillation.models.transformer.feature_extractors.tcait_classifier import TCAiTClassifier
 
 import torch.nn as nn
 import torch
@@ -12,8 +12,8 @@ import torch
 class TripletCrossAttentionViT(nn.Module):
     def __init__(self, embed_dim: int, num_classes: int, num_extractor_heads: int, num_classifier_heads: int, in_channels=3, in_dim=256, extractor_depth=8, extractor_dropout=0.1, \
                  extractor_mlp_ratio=4.0, extractor_patch_dim: Optional[int]=16, extractor_patch_kernel_size: Optional[int]=3, extractor_patch_stride: Optional[int]=2, \
-                 extractor_patch_ratio: Optional[float]=8.0, extractor_patch_ratio_decay: Optional[float]=0.5, extractor_patch_n_convs: Optional[int]=5, extractor_sr_ratio: Optional[int]=2, \
-                 extractor_use_minipatch=False, extractor_use_sra=False, classifier_depth=2, classifier_dropout=0.1, classifier_mlp_ratio=4.0):
+                 extractor_patch_ratio: Optional[float]=8.0, extractor_patch_ratio_decay: Optional[float]=0.5, extractor_patch_n_convs: Optional[int]=5, \
+                 extractor_use_minipatch=False, classifier_depth=2, classifier_dropout=0.1, classifier_mlp_ratio=4.0):
         
         '''
         Initializes an instance of the TripletCrossAttentionViT (T-CAiT) class.
@@ -34,9 +34,7 @@ class TripletCrossAttentionViT(nn.Module):
             extractor_patch_ratio: the starting rate at which the number of channels increases in the extractor's mini-patch embedding; defaults to 4.0 (only effective if use_minipatch is True).
             extractor_patch_ratio_decay: the rate at which the patch_ratio decays in the extractor's mini-patch embedding; defaults to 0.5 (only effective if use_minipatch is True).
             extractor_patch_n_convs: the number of convolutions to be used in the extractor's mini-patch embedding; defaults to 5 (only effective if use_minipatch is True).
-            extractor_sr_ratio: the spatial reduction ratio to be used by SRA in the extractor; defaults to 2 (only effective if use_sra is True).
             extractor_use_minipatch: indicates whether or not the extractor uses mini-patch embedding instead of standard patch embedding; defaults to False.
-            extractor_use_sra: indicates whether or not the extractor should use SRA instead of standard self-attention; defaults to False.
             classifier_depth: the number of transformer blocks to pass the input embedding through in the classifier; defaults to 2.
             classifier_dropout: the dropout probability used by each transformer block in the classifier; defaults to 0.1.
             classifier_mlp_ratio: the size of the hidden layer in each transformer block's MLP in the classifier, also used for scaling the MLP in the head of the classifier; defaults to 4.0.
@@ -46,10 +44,10 @@ class TripletCrossAttentionViT(nn.Module):
         
         self.__version__ = '0.1.1'
 
-        self.extractor = Extractor(embed_dim=embed_dim, num_heads=num_extractor_heads, in_channels=in_channels, in_dim=in_dim, depth=extractor_depth, dropout=extractor_dropout, sr_ratio=extractor_sr_ratio, \
+        self.extractor = TCAiTExtractor(embed_dim=embed_dim, num_heads=num_extractor_heads, in_channels=in_channels, in_dim=in_dim, depth=extractor_depth, dropout=extractor_dropout, sr_ratio=extractor_sr_ratio, \
                                    mlp_ratio=extractor_mlp_ratio, patch_dim=extractor_patch_dim, patch_kernel_size=extractor_patch_kernel_size, patch_stride=extractor_patch_stride, \
                                    patch_ratio=extractor_patch_ratio, patch_ratio_decay=extractor_patch_ratio_decay, patch_n_convs=extractor_patch_n_convs, use_minipatch=extractor_use_minipatch, use_sra=extractor_use_sra)
-        self.classifier = Classifier(embed_dim=embed_dim, num_heads=num_classifier_heads, num_classes=num_classes, depth=classifier_depth, dropout=classifier_dropout, mlp_ratio=classifier_mlp_ratio)
+        self.classifier = TCAiTClassifier(embed_dim=embed_dim, num_heads=num_classifier_heads, num_classes=num_classes, depth=classifier_depth, dropout=classifier_dropout, mlp_ratio=classifier_mlp_ratio)
 
     def __str__(self) -> str:
         '''

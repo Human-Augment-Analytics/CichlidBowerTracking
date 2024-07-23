@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch.nn as nn
 import torch
 
@@ -54,7 +56,7 @@ class SpatialReductionAttention(nn.Module):
 
         return x_red        
 
-    def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> torch.Tensor:
+    def forward(self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor) -> Tuple:
         '''
         Applies spatial reduction attention (SRA) to the passed Tensor.
 
@@ -71,6 +73,6 @@ class SpatialReductionAttention(nn.Module):
             k = self._apply_sr(k)
             v = self._apply_sr(v)
 
-        out, _ = self.attention(q, k, v)
+        out = self.attention(q, k, v)
 
         return out
