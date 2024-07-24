@@ -6,7 +6,8 @@
    - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86)
  - [How to Setup Rclone Remote](#how-to-setup-rclone-remote)
    - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86-1)
- - 
+ - [How to Use with PACE ](#how-to-use-with-pace)
+   - [ICE Cluster](#ice-cluster)
  - [References](#references)
 
 ## How to Setup Conda Environment
