@@ -27,7 +27,7 @@ This section explains how to setup the environment used by this repo. If your pr
 9. Exit the nano editor and run the command `source ~/.bashrc` to enact the changes made.
 10. Open a Windows Powershell tab in `cmd.exe` and run the command `wsl --shutdown` [4](https://stackoverflow.com/questions/67923183/miniconda-on-wsl2-ubuntu-20-04-fails-with-condahttperror-http-000-connection).
 11. Reopen the WSL2 commmand line in `cmd.exe` and enter the command `conda --version`; if you get a version number as output, miniconda is correctly installed.
-12. Traverse to the desired directory in your file system and clone this repo using `git clone https://github.com/charlesrclark1243/CichlidBowerTracking.git`. 
+12. Traverse to the desired directory in your file system and clone this repo using `git clone https://github.com/Human-Augment-Analytics/CichlidBowerTracking.git`. 
 13. Setup the environment by entering the command `conda env create -f cichlidbowertracking.yml` [3](https://stackoverflow.com/a/59686678).
 14. If you get the error `CondaSSLError: Encountered an SSL error. Most likely a certificate verification issue.` try running the previous command again and it will likely pickup with the setup exactly where it left off before the error.
 
