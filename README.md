@@ -47,9 +47,9 @@ This section explains how to setup the rclone remote used to connect to the Drop
 
 ### ICE Cluster
 
-1. Download Georgia Tech's VPN from [https://vpn.gatech.edu/global-protect/login.esp](https://vpn.gatech.edu/global-protect/login.esp) for your specific OS and turn it on (have your Duo Sign-in device ready) [5](https://vpn.gatech.edu/global-protect/login.esp).
+1. Download Georgia Tech's VPN from [https://vpn.gatech.edu/global-protect/login.esp](https://vpn.gatech.edu/global-protect/login.esp) for your specific OS and turn it on (have your Duo Sign-in device ready).
 2. Download VS Code onto your device.
-3. Set up SSH support in VS Code using the instructions at [https://code.visualstudio.com/docs/remote/ssh](https://code.visualstudio.com/docs/remote/ssh) and access the ICE cluster in VS Code.
+3. Set up SSH support in VS Code using the instructions at [https://code.visualstudio.com/docs/remote/ssh](https://code.visualstudio.com/docs/remote/ssh) and access the ICE cluster in VS Code [5](https://code.visualstudio.com/docs/remote/ssh)
 4. Install/Import rclone to your home path (`~`) and add the following lines to your `~/.bashrc`:
 
 ```bash
