@@ -47,9 +47,7 @@ class SpatialReductionAttention(nn.Module):
 
         batch_size, num_patches, init_embed_dim = x.shape
         dim = int(math.sqrt(num_patches))
-
-        print(f'(B, N, C) = ({batch_size}, {num_patches}, {init_embed_dim})')
-
+        
         x_red = x.permute(0, 2, 1).reshape(batch_size, init_embed_dim, dim, dim)
         x_red = self.sr(x_red).reshape(batch_size, init_embed_dim, -1).permute(0, 2, 1)
         x_red = self.norm(x_red)

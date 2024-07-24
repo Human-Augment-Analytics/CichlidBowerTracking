@@ -66,11 +66,13 @@ class PatchEmbedding(nn.Module):
 
         # embed
         out = self.patch_conv(x) # shape (N, C_embed, D_out, D_out)
-        if self.add_norm:
-            out = self.norm(out)
 
         # reshape
         out = self.flatten(out) # shape (N, C_embed, D_out * D_out)
         out = torch.transpose(out, dim0=1, dim1=2) # shape (N, D_out * D_out, C_embed)
+
+        # optional layer norm
+        if self.add_norm:
+            out = self.norm(out)
         
         return out

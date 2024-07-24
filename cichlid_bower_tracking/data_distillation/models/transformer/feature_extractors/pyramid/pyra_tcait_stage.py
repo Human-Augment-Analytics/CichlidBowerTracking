@@ -2,7 +2,7 @@ from typing import Tuple
 
 from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
 from data_distillation.models.transformer.embeddings.cls_tokens import CLSTokens
-from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
+from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 from data_distillation.models.transformer.attention_mechs.cross_attention import CrossAttention
 from data_distillation.models.transformer.transformer_block import TransformerBlock
 
@@ -31,6 +31,8 @@ class PyraTCAiTStage(nn.Module):
             add_cls: a Boolean indicating that CLS tokens should be added to the embeddings; defaults to False.
         '''
 
+        super(PyraTCAiTStage, self).__init__()
+
         self.__version__ = '0.1.0'
 
         self.embed_dim = embed_dim
@@ -51,9 +53,9 @@ class PyraTCAiTStage(nn.Module):
             self.positive_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
             self.negative_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
         
-        self.anchor_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
-        self.positive_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
-        self.negative_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
 
         self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
 
@@ -70,9 +72,9 @@ class PyraTCAiTStage(nn.Module):
             string: a string representation of the i-th stage of a PyraT-CAiT.
         '''
 
-        string = f'Stage {self.stage_num}\n{"=" * 90}\n'
-        string += f'{"Name":50s} | {"Params":12s} | {"Size":20s}\n'
-        string += f'{"-" * 90}\n'
+        string = f'Stage {self.stage_num}\n{"=" * 110}\n'
+        string += f'{"Name":70s} | {"Params":12s} | {"Size":20s}\n'
+        string += f'{"-" * 110}\n'
 
         total_num_params = 0
 
@@ -83,10 +85,10 @@ class PyraTCAiTStage(nn.Module):
             num_params = param.numel()
             total_num_params += num_params
 
-            string += f'{name:50s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
+            string += f'{name:70s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
 
-        string += f'{"-" * 90}\n'
-        string += f'{"STAGE " + self.stage_num + " TOTAL # PARAMS":50s} | {total_num_params:35d}\n'
+        string += f'{"-" * 110}\n'
+        string += f'{"STAGE " + str(self.stage_num) + " TOTAL # PARAMS":70s} | {total_num_params:35d}\n'
 
         self.num_params = total_num_params
 
@@ -241,7 +243,7 @@ class PyraTCAiTStage(nn.Module):
 
         return old_in_dim
 
-    def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor. torch.Tensor]:
+    def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
         Passes the input triplet through the i-th Stage of a PyraT-CAiT model.
 

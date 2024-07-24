@@ -3,7 +3,7 @@ import math
 
 from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
-from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
+from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 from data_distillation.models.transformer.embeddings.cls_tokens import CLSTokens
 
 from data_distillation.models.transformer.attention_mechs.cross_attention import CrossAttention
@@ -69,11 +69,11 @@ class TCAiTExtractor(nn.Module):
         self.negative_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
         
         n_patches = self.patcher.get_num_patches(self.in_dim) if not self.use_minipatch else self.patcher.get_num_patches_and_dims_list(self.in_dim)[0]
-        self.anchor_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
-        self.positive_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
-        self.negative_pos_encoder = PositonalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
+        self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
+        self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
+        self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=n_patches, add_one=True)
 
-        self.transformer_blocks = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=(self.use_sra and i % 2 == 1), sr_ratio=self.sr_ratio) for i in range(self.depth)])
+        self.transformer_blocks = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio) for _ in range(self.depth)])
         
         self.positive_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
         self.negative_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.num_heads, dropout=self.dropout)
@@ -88,9 +88,9 @@ class TCAiTExtractor(nn.Module):
             string: a string representation of the Extractor component.
         '''
 
-        string = f'Extractor\n{"=" * 90}\n'
-        string += f'{"Name":50s} | {"Params":12s} | {"Size":20s}\n'
-        string += f'{"-" * 90}\n'
+        string = f'Extractor\n{"=" * 110}\n'
+        string += f'{"Name":70s} | {"Params":12s} | {"Size":20s}\n'
+        string += f'{"-" * 110}\n'
 
         total_num_params = 0
 
@@ -101,10 +101,10 @@ class TCAiTExtractor(nn.Module):
             num_params = param.numel()
             total_num_params += num_params
 
-            string += f'{name:50s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
+            string += f'{name:70s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
 
-        string += f'{"-" * 90}\n'
-        string += f'{"TOTAL EXTRACTOR # PARAMS":50s} | {total_num_params:35d}\n'
+        string += f'{"-" * 110}\n'
+        string += f'{"TOTAL EXTRACTOR # PARAMS":70s} | {total_num_params:35d}\n'
 
         self.num_params = total_num_params
 

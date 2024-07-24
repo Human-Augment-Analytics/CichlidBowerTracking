@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch
 
-class PositonalEncoding(nn.Module):
+class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim: int, n_patches: int, add_one=False):
         '''
         Initializes an instance of the PositionalEncoding class.
@@ -11,7 +11,7 @@ class PositonalEncoding(nn.Module):
             n_patches: an int value representing the total number of patches in the passed embedding.
         '''
         
-        super(PositonalEncoding, self).__init__()
+        super(PositionalEncoding, self).__init__()
 
         self.__version__ = '0.1.0'
 

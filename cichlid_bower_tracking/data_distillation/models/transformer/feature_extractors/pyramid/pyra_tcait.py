@@ -27,6 +27,8 @@ class PyraTCAiT(nn.Module):
             add_classifier: a Boolean indicating whether or not to use a classifier layer at the end of the model; defaults to False.
             num_classes: the (optional) number of classes to use in the classifier; defaults to None, only effective if add_classifier is True.
         '''
+
+        super(PyraTCAiT, self).__init__()
         
         self.__version__ = '0.1.0'
 
@@ -55,7 +57,7 @@ class PyraTCAiT(nn.Module):
         for i in range(self.num_stages):
             stage_i = Stage(embed_dim=self.embed_dims[i],
                             in_channels=self.in_channels if i == 0 else self.embed_dims[i - 1],
-                            in_dim=self.in_dim if i == 0 else int(math.pow(self.in_dim // math.pow(2, i + 1), 2)),
+                            in_dim=self.in_dim if i == 0 else int(self.in_dim // math.pow(2, i + 1)),
                             num_heads=self.head_counts[i],
                             depth=self.depths[i], 
                             stage_num=i,
@@ -64,7 +66,7 @@ class PyraTCAiT(nn.Module):
                             mlp_ratio=self.mlp_ratios[i],
                             sr_ratio=self.sr_ratios[i],
                             add_cls=(self.add_classifier and i == self.num_stages - 1))
-            
+                        
             stages.append(stage_i)
 
         self.stages = nn.Sequential(*stages)
@@ -89,8 +91,8 @@ class PyraTCAiT(nn.Module):
             stages_string += str(stage) + '\n'
             self.num_params += stage.num_params
 
-        footer_string = f'{"=" * 90}\n'
-        footer_string += f'{"PyraT-CAiT # PARAMS":50s} | {self.num_params:35d}\n'
+        footer_string = f'{"=" * 110}\n'
+        footer_string += f'{"PyraT-CAiT # PARAMS":70s} | {self.num_params:35d}\n'
 
         string = stages_string + footer_string
         return string

@@ -65,8 +65,8 @@ class TripletCrossAttentionViT(nn.Module):
         self.num_params = self.extractor.num_params + self.classifier.num_params
 
         string = extractor_string + '\n' + classifier_string + '\n'
-        string += f'{"=" * 90}\n'
-        string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":50s} | {self.num_params:35d}\n'
+        string += f'{"=" * 110}\n'
+        string += f'{"TRIPLET CROSS ATTENTION ViT # PARAMS":70s} | {self.num_params:35d}\n'
 
         return string
     

@@ -4,7 +4,7 @@ from data_distillation.models.transformer.embeddings.patch_embedding import Patc
 from data_distillation.models.transformer.embeddings.patch_transpose import PatchTranspose
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
 from data_distillation.models.transformer.embeddings.mini_patch_transpose import MiniPatchTranspose
-from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
+from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 
 from data_distillation.models.transformer.autoencoders.vit_encoder import ViTEncoder
 from data_distillation.models.transformer.autoencoders.vit_decoder import ViTDecoder
@@ -91,7 +91,7 @@ class TripletViTAutoencoder(nn.Module):
                                                  n_patches=self.patcher.get_num_patches_and_dims_list(self.img_dim)[0], batch_size=self.batch_size, out_channels=self.img_channels, out_dim=self.img_dim, kernel_size=self.transposer_kernel_size, \
                                                  stride=self.transposer_stride, ratio=self.transposer_ratio, ratio_growth=self.transposer_ratio_growth, n_deconvs=self.transposer_n_deconvs)
             
-        self.pos_enc = PositonalEncoding(embed_dim=self.embed_dim, n_patches=(self.patcher.get_num_patches(self.img_dim) if not self.use_minipatching else self.patcher.get_num_patches_and_dims_list(self.img)[0]))
+        self.pos_enc = PositionalEncoding(embed_dim=self.embed_dim, n_patches=(self.patcher.get_num_patches(self.img_dim) if not self.use_minipatching else self.patcher.get_num_patches_and_dims_list(self.img)[0]))
 
         self.encoder = ViTEncoder(embed_dim=self.embed_dim, n_heads=self.n_encoder_heads, patcher=self.patcher, pos_enc=self.pos_enc, n_encoders=self.n_encoders, p_dropout=self.encoder_dropout, mlp_ratio=self.encoder_mlp_ratio)
         self.decoder = ViTDecoder(embed_dim=self.embed_dim, n_heads=self.n_decoder_heads, transposer=self.transposer, n_decoders=self.n_decoders, p_dropout=self.decoder_dropout, mlp_ratio=self.decoder_mlp_ratio)

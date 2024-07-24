@@ -2,7 +2,7 @@ from typing import Union
 
 from data_distillation.models.transformer.embeddings.patch_embedding import PatchEmbedding
 from data_distillation.models.transformer.embeddings.mini_patch_embedding import MiniPatchEmbedding
-from data_distillation.models.transformer.embeddings.positional_encoding import PositonalEncoding
+from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 
 from data_distillation.models.transformer.transformer_block import TransformerBlock
 
@@ -10,7 +10,7 @@ import torch.nn as nn
 import torch
 
 class ViTEncoder(nn.Module):
-    def __init__(self, embed_dim: int, n_heads: int, patcher: Union[PatchEmbedding, MiniPatchEmbedding], pos_enc: PositonalEncoding, n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
+    def __init__(self, embed_dim: int, n_heads: int, patcher: Union[PatchEmbedding, MiniPatchEmbedding], pos_enc: PositionalEncoding, n_encoders=8, p_dropout=0.1, mlp_ratio=4.0):
         '''
         Initializes an instance of the ViTEncoder class.
 

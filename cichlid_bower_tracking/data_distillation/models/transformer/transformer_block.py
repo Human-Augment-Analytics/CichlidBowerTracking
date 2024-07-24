@@ -1,5 +1,4 @@
 from data_distillation.models.transformer.attention_mechs.spatial_reduction_attention import SpatialReductionAttention as SRA
-from data_distillation.models.transformer.embeddings.positional_encoding import PositionalEncoding
 
 import torch.nn as nn
 import torch

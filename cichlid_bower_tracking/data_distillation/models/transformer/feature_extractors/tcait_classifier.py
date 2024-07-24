@@ -54,9 +54,9 @@ class TCAiTClassifier(nn.Module):
             string: a string representation of the Classifier component.
         '''
 
-        string = f'Classifier\n{"=" * 90}\n'
-        string += f'{"Name":50s} | {"# Params":12s} | {"Size":20s}\n'
-        string += f'{"-" * 90}\n'
+        string = f'Classifier\n{"=" * 110}\n'
+        string += f'{"Name":70s} | {"# Params":12s} | {"Size":20s}\n'
+        string += f'{"-" * 110}\n'
 
         total_num_params = 0
 
@@ -67,10 +67,10 @@ class TCAiTClassifier(nn.Module):
             num_params = param.numel()
             total_num_params += num_params
 
-            string += f'{name:50s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
+            string += f'{name:70s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
 
-        string += f'{"-" * 90}\n'
-        string += f'{"TOTAL CLASSIFIER # PARAMS":50s} | {total_num_params:35d}\n'
+        string += f'{"-" * 110}\n'
+        string += f'{"TOTAL CLASSIFIER # PARAMS":70s} | {total_num_params:35d}\n'
 
         self.num_params = total_num_params
 
