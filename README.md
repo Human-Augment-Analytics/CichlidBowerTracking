@@ -6,7 +6,8 @@
    - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86)
  - [How to Setup Rclone Remote](#how-to-setup-rclone-remote)
    - [Windows WSL2 (Ubuntu x86)](#windows-wsl2-ubuntu-x86-1)
- - 
+ - [How to Use with PACE ](#how-to-use-with-pace)
+   - [ICE Cluster](#ice-cluster)
  - [References](#references)
 
 ## How to Setup Conda Environment
@@ -26,7 +27,7 @@ This section explains how to setup the environment used by this repo. If your pr
 9. Exit the nano editor and run the command `source ~/.bashrc` to enact the changes made.
 10. Open a Windows Powershell tab in `cmd.exe` and run the command `wsl --shutdown` [4](https://stackoverflow.com/questions/67923183/miniconda-on-wsl2-ubuntu-20-04-fails-with-condahttperror-http-000-connection).
 11. Reopen the WSL2 commmand line in `cmd.exe` and enter the command `conda --version`; if you get a version number as output, miniconda is correctly installed.
-12. Traverse to the desired directory in your file system and clone this repo using `git clone https://github.com/charlesrclark1243/CichlidBowerTracking.git`. 
+12. Traverse to the desired directory in your file system and clone this repo using `git clone https://github.com/Human-Augment-Analytics/CichlidBowerTracking.git`. 
 13. Setup the environment by entering the command `conda env create -f cichlidbowertracking.yml` [3](https://stackoverflow.com/a/59686678).
 14. If you get the error `CondaSSLError: Encountered an SSL error. Most likely a certificate verification issue.` try running the previous command again and it will likely pickup with the setup exactly where it left off before the error.
 
@@ -46,9 +47,9 @@ This section explains how to setup the rclone remote used to connect to the Drop
 
 ### ICE Cluster
 
-1. Download Georgia Tech's VPN from [https://vpn.gatech.edu/global-protect/login.esp](https://vpn.gatech.edu/global-protect/login.esp) for your specific OS and turn it on (have your Duo Sign-in device ready) [5](https://vpn.gatech.edu/global-protect/login.esp).
+1. Download Georgia Tech's VPN from [https://vpn.gatech.edu/global-protect/login.esp](https://vpn.gatech.edu/global-protect/login.esp) for your specific OS and turn it on (have your Duo Sign-in device ready).
 2. Download VS Code onto your device.
-3. Set up SSH support in VS Code using the instructions at [https://code.visualstudio.com/docs/remote/ssh](https://code.visualstudio.com/docs/remote/ssh) and access the ICE cluster in VS Code.
+3. Set up SSH support in VS Code using the instructions at [https://code.visualstudio.com/docs/remote/ssh](https://code.visualstudio.com/docs/remote/ssh) and access the ICE cluster in VS Code [5](https://code.visualstudio.com/docs/remote/ssh)
 4. Install/Import rclone to your home path (`~`) and add the following lines to your `~/.bashrc`:
 
 ```bash
