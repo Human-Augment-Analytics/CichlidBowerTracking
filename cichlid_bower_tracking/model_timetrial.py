@@ -3,6 +3,7 @@ import argparse, time
 
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 from data_distillation.models.transformer.feature_extractors.tcait_extractor import TCAiTExtractor
+from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait import PyraTCAiT
 
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss as TCLoss
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
@@ -22,7 +23,7 @@ import torch
 # parse arguments
 parser = argparse.ArgumentParser()
 
-parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier'], help='The type of model to be used during training and validation.')
+parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier', 'pyra-tcait'], help='The type of model to be used during training and validation.')
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
 parser.add_argument('--num-train-examples', '-t', type=int, default=11797632, help='The number of examples to be used by the training \"dataset\".')
 parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
@@ -85,16 +86,19 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating T-CAiT model...')
     
-    model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
-                  in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
-                  extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride, extractor_patch_ratio=args.patch_ratio,
-                  extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,
-                  classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
+    if args.model != 'pyra-tcait': 
+        model = TCAiT(embed_dim=args.embed_dim, num_classes=args.num_classes, num_extractor_heads=args.num_extractor_heads, num_classifier_heads=args.num_classifier_heads,
+                      in_channels=args.channels, in_dim=args.dim, extractor_depth=args.extractor_depth, extractor_dropout=args.extractor_dropout, extractor_mlp_ratio=args.extractor_mlp_ratio,
+                      extractor_patch_dim=args.patch_size, extractor_patch_kernel_size=args.patch_kernel_size, extractor_patch_stride=args.patch_stride, extractor_patch_ratio=args.patch_ratio,
+                      extractor_patch_ratio_decay=args.patch_ratio_decay, extractor_patch_n_convs=args.patch_num_convs, extractor_use_minipatch=args.use_minipatch, classifier_depth=args.classifier_depth,
+                      classifier_dropout=args.classifier_dropout, classifier_mlp_ratio=args.classifier_mlp_ratio)
     
-    if args.model == 'tcait-extractor':
-        model = model.extractor
-    elif args.model == 'tcait-classifier':
-        model.freeze_extractor()
+        if args.model == 'tcait-extractor':
+            model = model.extractor
+        elif args.model == 'tcait-classifier':
+            model.freeze_extractor()
+    else:
+        model = PyraTCAiT()
 
     if args.debug:
         print(model)
