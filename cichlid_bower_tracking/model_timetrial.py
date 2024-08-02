@@ -23,35 +23,52 @@ import torch
 # parse arguments
 parser = argparse.ArgumentParser()
 
+# setup arguments
 parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier', 'pyra-tcait'], help='The type of model to be used during training and validation.')
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
 parser.add_argument('--num-train-examples', '-t', type=int, default=11797632, help='The number of examples to be used by the training \"dataset\".')
 parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
 parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help='The number of batches to be used by the training \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
 parser.add_argument('--num-valid-batches', '-V', type=int, default=23657, help='The number o batches to be used by the validation \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
-parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
-parser.add_argument('--num-extractor-heads', '-X', type=int, default=8, help='The number of attention heads to use in the extractor; defaults to 12.')
-parser.add_argument('--num-classifier-heads', '-C', type=int, default=8, help='The number of attention heads to use in the classifier; defaults to 12.')
 parser.add_argument('--channels', '-c', type=int, choices=[1, 3], default=3, help='The number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.')
 parser.add_argument('--dim', '-b', type=int, default=224, help='The dimension of the images; defaults to 224.')
+parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
+parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
+parser.add_argument('--device-type', '-i', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device type to use during training/validation; defaults to \'gpu\'.')                    
+parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
+
+# standard T-CAiT arguments
+parser.add_argument('--embed-dim', '-e', type=int, default=768, help='The embedding dimension to be used in the model; defaults to 768.')
+parser.add_argument('--num-extractor-heads', '-X', type=int, default=8, help='The number of attention heads to use in the extractor; defaults to 12.')
+parser.add_argument('--num-classifier-heads', '-C', type=int, default=8, help='The number of attention heads to use in the classifier; defaults to 12.')
 parser.add_argument('--extractor-depth', '-D', type=int, default=8, help='The number of transformer blocks to include in the extractor; defaults to 8.')
 parser.add_argument('--classifier-depth', '-d', type=int, default=4, help='The number of transformer blocks to include in the classifier; defaults to 4.')
 parser.add_argument('--extractor-dropout', '-Z', type=float, default=0.1, help='The dropout probability to be used in the extractor; defaults to 0.1.')
 parser.add_argument('--classifier-dropout', '-z', type=float, default=0.1, help='The dropout probability to be used in the classifier; defaults to 0.1.')
 parser.add_argument('--extractor-mlp-ratio', '-R', type=float, default=4.0, help='The size of the MLP hidden layer in each transformer block in the extractor, relative to the embedding size; defaults to 4.0.')
 parser.add_argument('--classifier-mlp-ratio', '-r', type=float, default=4.0, help='The size of the MLP hidden layer in each transformer block in the classifier, relative to the embedding size; defaults to 4.0.')
-parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option); defaults to 16.')
 parser.add_argument('--patch-kernel-size', '-k', type=int, default=3, help='The kernel size to be used in the mini-patch embedding (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 3.')
 parser.add_argument('--patch-stride', '-s', type=int, default=2, help='The stride to be used in the mini-patch embedding (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 2.')
 parser.add_argument('--patch-ratio', '-P', type=float, default=8.0, help='The rate at which the number of channels in the mini-patcher increases (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 8.0.')
 parser.add_argument('--patch-ratio-decay', '-x', type=float, default=0.5, help='The rate at which the \"--patch-ratio\"/\"-P\" value decays (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 0.5.')
 parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The number of convolutions to use in the mini-patcher (meaningless without using the \"--use-minipatch\"/\"-m\" option); defaults to 5.')
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
-parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
-parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
-parser.add_argument('--device-type', '-i', type=str, choices=['gpu', 'cpu'], default='gpu', help='The device type to use during training/validation; defaults to \'gpu\'.')                    
-parser.add_argument('--num-workers', '-W', type=int, default=0, help='The number of workers to use in the dataloaders.')
+
+# PyraT-CAiT arguments
+parser.add_argument('--embed-dims', '-q', nargs='+', default=[64, 128, 320, 512], help='The embedding dimensions to use in the stages of a PyraT-CAiT model.')
+parser.add_argument('--head-counts', '-H', nargs='+', default=[1, 2, 5, 8], help='The number of attention heads to use in the stages of a PyraT-CAiT model.')
+parser.add_argument('--mlp-ratios', '-m', nargs='+', default=[8, 8, 4, 4], help='The MLP expansion ratios to be used in the stages of a PyraT-CAiT model.')
+parser.add_argument('--sr-ratios', '-M', nargs='+', default=[8, 4, 2, 1], help='The spatial reduction ratios to be used in the stages of a PyraT-CAiT model.')
+parser.add_argument('--depths', '-a', nargs='+', default=[3, 8, 27, 3], help='The depth of each stage of a PyraT-CAiT model.')
+parser.add_argument('--num-stages', '-A', type=int, default=4, help='The number of stages to use in a PyraT-CAiT model.')
+parser.add_argument('--dropout', '-w', type=float, default=0.1, help='The dropout probability to be used in the stages of a PyraT-CAiT model.')
+parser.add_argument('--add-classifier', '-W', default=False, action='store_true', help='Indicates that an MLP head should be added to the PyraT-CAiT model.')
+
+# shared arguments
+parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option and model is T-CAiT-based); defaults to 16.')
+
+# miscellaneous arguments
 parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
 parser.add_argument('--disable-progress-bar', default=False, action='store_true', help='Indicates that no progress bar should be printed out during the training/validation processes.')
 
@@ -98,7 +115,9 @@ def main(gpu_id: int, world_size: int):
         elif args.model == 'tcait-classifier':
             model.freeze_extractor()
     else:
-        model = PyraTCAiT()
+        model = PyraTCAiT(embed_dims=args.embed_dims, head_counts=args.head_counts, mlp_ratios=args.mlp_ratios, sr_ratios=args.sr_ratios, depths=args.depths,
+                          num_stages=args.num_stages, dropout=args.dropout, first_patch_dim=args.patch_size, in_channels=args.channels, in_dim=args.dim, 
+                          add_classifier=args.add_classifier, num_classes=args.num_classes)
 
     if args.debug:
         print(model)
