@@ -186,13 +186,15 @@ class DataDistiller:
                 if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
-                    y_prob = torch.softmax(Y, dim=1)
-                    y_pred = y_prob.argmax(dim=1)
+                    if Y is not None:
+                        y_prob = torch.softmax(Y, dim=1)
+                        y_pred = y_prob.argmax(dim=1)
                 elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT)):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
-                    y_prob = torch.softmax(Y, dim=1)
-                    y_pred = y_prob.argmax(dim=1)
+                    if Y is not None:
+                        y_prob = torch.softmax(Y, dim=1)
+                        y_pred = y_prob.argmax(dim=1)
                 elif isinstance(self.model, TCAiTExtractor):
                     z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
                 elif self.ddp and isinstance(self.model.module, TCAiTExtractor):
@@ -321,13 +323,15 @@ class DataDistiller:
                     if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT):
                         z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
-                        y_prob = torch.softmax(Y, dim=1)
-                        y_pred = y_prob.argmax(dim=1)
+                        if Y is not None:
+                            y_prob = torch.softmax(Y, dim=1)
+                            y_pred = y_prob.argmax(dim=1)
                     elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT)):
                         z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
-                        y_prob = torch.softmax(Y, dim=1)
-                        y_pred = y_prob.argmax(dim=1)
+                        if Y is not None:
+                            y_prob = torch.softmax(Y, dim=1)
+                            y_pred = y_prob.argmax(dim=1)
                     elif isinstance(self.model, TCAiTExtractor):
                         z_anchor, z_positive, z_negative = self.model(anchor, positive, negative)
                     elif self.ddp and isinstance(self.model.module, TCAiTExtractor):

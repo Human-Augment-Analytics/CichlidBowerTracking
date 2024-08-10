@@ -56,14 +56,14 @@ parser.add_argument('--patch-num-convs', '-N', type=int, default=5, help='The nu
 parser.add_argument('--use-minipatch', '-u', default=False, action='store_true', help='Indicates that the extractor should use a mini-patch embedding instead of a standard embedding.')
 
 # PyraT-CAiT arguments
-parser.add_argument('--embed-dims', '-q', nargs='+', default=[64, 128, 320, 512], help='The embedding dimensions to use in the stages of a PyraT-CAiT model.')
-parser.add_argument('--head-counts', '-H', nargs='+', default=[1, 2, 5, 8], help='The number of attention heads to use in the stages of a PyraT-CAiT model.')
-parser.add_argument('--mlp-ratios', '-m', nargs='+', default=[8, 8, 4, 4], help='The MLP expansion ratios to be used in the stages of a PyraT-CAiT model.')
-parser.add_argument('--sr-ratios', '-M', nargs='+', default=[8, 4, 2, 1], help='The spatial reduction ratios to be used in the stages of a PyraT-CAiT model.')
-parser.add_argument('--depths', '-a', nargs='+', default=[3, 8, 27, 3], help='The depth of each stage of a PyraT-CAiT model.')
-parser.add_argument('--num-stages', '-A', type=int, default=4, help='The number of stages to use in a PyraT-CAiT model.')
+parser.add_argument('--embed-dims', '-q', type=int, nargs='+', default=[64, 128, 320, 512], help='The embedding dimensions to use in the stages of a PyraT-CAiT model.')
+parser.add_argument('--head-counts', '-H', type=int, nargs='+', default=[1, 2, 5, 8], help='The number of attention heads to use in the stages of a PyraT-CAiT model.')
+parser.add_argument('--mlp-ratios', '-m', type=int, nargs='+', default=[8, 8, 4, 4], help='The MLP expansion ratios to be used in the stages of a PyraT-CAiT model.')
+parser.add_argument('--sr-ratios', '-M', type=int, nargs='+', default=[8, 4, 2, 1], help='The spatial reduction ratios to be used in the stages of a PyraT-CAiT model.')
+parser.add_argument('--depths', '-a', type=int, nargs='+', default=[3, 8, 27, 3], help='The depth of each stage of a PyraT-CAiT model.')
+parser.add_argument('--num-stages', '-g', type=int, default=4, help='The number of stages to use in a PyraT-CAiT model.')
 parser.add_argument('--dropout', '-w', type=float, default=0.1, help='The dropout probability to be used in the stages of a PyraT-CAiT model.')
-parser.add_argument('--add-classifier', '-W', default=False, action='store_true', help='Indicates that an MLP head should be added to the PyraT-CAiT model.')
+parser.add_argument('--add-classifier', '-A', default=False, action='store_true', help='Indicates that an MLP head should be added to the PyraT-CAiT model.')
 
 # shared arguments
 parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option and model is T-CAiT-based); defaults to 16.')
@@ -132,9 +132,9 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating loss function...')
 
-    if args.model == 'tcait':
+    if args.model == 'tcait' or (args.model == 'pyra-tcait' and args.add_classifier):
         loss_fn = TCLoss()
-    elif args.model == 'tcait-extractor':
+    elif args.model == 'tcait-extractor'  or (args.model == 'pyra-tcait' and not args.add_classifier):
         loss_fn = TripletLoss()
     else:
         loss_fn = nn.CrossEntropyLoss()
