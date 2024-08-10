@@ -92,9 +92,34 @@ class PyraTCAiT(nn.Module):
             self.num_params += stage.num_params
 
         footer_string = f'{"=" * 110}\n'
-        footer_string += f'{"PyraT-CAiT # PARAMS":70s} | {self.num_params:35d}\n'
+        footer_string += f'{("PyraT-CAiT # PARAMS" if not self.add_classifier else "Pre-classifier PyraT-CAiT # PARAMS"):70s} | {self.num_params:35d}\n'
 
-        string = stages_string + footer_string
+        classifier_string = ''
+        if self.add_classifier:
+            classifier_string = f'\nClassifier\n{"=" * 110}\n'
+            classifier_string += f'{"Name":70s} | {"Params":12s} | {"Size":20s}\n'
+            classifier_string += f'{"-" * 110}\n'
+
+            total_num_params = 0
+            for name, param in self.mlp.named_parameters():
+                if not param.requires_grad:
+                    continue
+                
+                num_params = param.numel()
+                total_num_params += num_params
+
+                classifier_string += f'{name:70s} | {(num_params):12d} | {str(tuple(param.size())):20s}\n'
+            
+            classifier_string += f'{"-" * 110}\n'
+            classifier_string += f'{"CLASSIFIER # PARAMS":70s} | {total_num_params:35d}\n'
+
+            self.num_params += total_num_params
+
+            classifier_string += f'\n{"=" * 110}\n'
+            classifier_string += f'{"FULL PyraT-CAiT # PARAMS":70s} | {self.num_params:35d}\n'
+
+        string = stages_string + footer_string + classifier_string
+
         return string
     
     def _replace_classifier(self, new_num_classes: int) -> int:
