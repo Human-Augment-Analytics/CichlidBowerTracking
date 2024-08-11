@@ -421,6 +421,8 @@ class DataDistiller:
             # save checkpoint
             if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
                 self._save_checkpoint(epoch)
+
+            dist.barrier()
         
         # final print statement
         if not self.disable_progress_bar:
@@ -455,7 +457,7 @@ class DataDistiller:
         Inputs:
             epoch: the curret epoch number.
         '''
-        
+
         if epoch > 0:
             checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch - 1}.pth'
             assert os.path.exists(checkpoint_path), f'Loading Error: Checkpoint file "{checkpoint_path}" does not exist.'
