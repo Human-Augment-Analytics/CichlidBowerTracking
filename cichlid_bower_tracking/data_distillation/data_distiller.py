@@ -28,6 +28,7 @@ from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 
+import torch.distributed as dist
 import torch.optim as optim
 import torch.nn as nn
 import torch
@@ -50,8 +51,8 @@ def ddp_setup(rank, world_size):
 
 class DataDistiller:
     def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT], \
-                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, save_best_weights: bool, \
-                 save_fp: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
+                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, \
+                 checkpoints_dir: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -61,8 +62,7 @@ class DataDistiller:
             loss_fn: a PyTorch module representing the loss function to be used in evaluating the passed model during training/validation.
             optimizer: a PyTorch Optimizer to be used in updating the passed model's weights during training.
             nepochs: an integer indicating the number of epochs over which training/validation will be performed.
-            save_best_weights: a Boolean indicating whether or not the model's best training/validation weights should be saved (overwrites any currently saved weights at the same passed filepath).
-            save_fp: a string representing the local filepath where the model's weights will be stored (only effective if save_best_weights = True).
+            checkpoints_dir: a string representing the local directory path where checkpoints will be saved.
             device: a string indicating the device on which training/validation and distillation will occur (must be either "cpu" or "gpu").
             gpu_id: a string representing the gpu_id to be used.
             ddp: indicates that the model should be wrapped in a DDP object.
@@ -102,9 +102,7 @@ class DataDistiller:
         self.nepochs = nepochs
         self.nclasses = nclasses
 
-        self.save_best_weights = save_best_weights
-        self.save_fp = save_fp
-
+        self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
         self.disable_progress_bar = disable_progress_bar
 
     def _train(self, epoch: int) -> Tuple[float]:
@@ -379,7 +377,7 @@ class DataDistiller:
             else:
                 raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
-    def _main_loop(self) -> Union[nn.Module, DDP]:
+    def main_loop(self) -> None:
         '''
         Performs the main training/validation loop for self.model.
 
@@ -388,13 +386,13 @@ class DataDistiller:
         Returns:
             best_model: a PyTorch model representing a copy of the best model observed during validation.
         '''
-
-        # keep track of best average validation loss and best model weights
-        best_valid_avg = float('inf')
-        best_model = None
-
+        
         # loop through passed number of epochs
         for epoch in range(self.nepochs):
+            # load previous epoch's checkpoint
+            self._load_checkpoint(epoch)
+
+            # epoch start print statement
             if not self.disable_progress_bar:
                 print('\n' + '-' * 93)
                 print(f'EPOCH [{epoch}/{self.nepochs}]')
@@ -420,16 +418,9 @@ class DataDistiller:
                 self.valid_logger.add(valid_min, valid_max, valid_avg)
                 self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
 
-            # if current model is an improvement, save it and its average loss
-            if not isinstance(self.model, TCAiT):
-                if valid_avg < best_valid_avg:
-                    best_valid_avg = valid_avg
-                    best_model = copy.deepcopy(self.model)
-
-            else:
-                if valid_acc_avg < best_valid_avg:
-                    best_valid_avg = valid_acc_avg
-                    best_model = copy.deepcopy(self.model)
+            # save checkpoint
+            if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
+                self._save_checkpoint(epoch)
         
         # final print statement
         if not self.disable_progress_bar:
@@ -437,44 +428,87 @@ class DataDistiller:
         print(f'BEST VALIDATION MODEL {"LOSS" if not isinstance(self.model, TCAiT) else "ACCURACY"}: {best_valid_avg:.4f}')
         if not self.disable_progress_bar:
             print('=' * 93 + '\n')
-
-        # return the best model
-        return best_model
     
-    def _save_model_weights(self, best_model: nn.Module) -> bool:
+    def _save_checkpoint(self, epoch: int) -> None:
         '''
-        Saves the weights of the best model to the self.save_fp filepath.
+        Saves the current epoch's model and optimizer state dictionaries in a checkpoint file.
+
+        Input:
+            epoch: the current epoch number.
+        '''
+
+        checkpoint = {
+            'epoch': epoch,
+            'model_state': self.model.state_dict(),
+            'optim_state': self.model.state_dict()
+        }
+
+        checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch}.pth'
+        torch.save(checkpoint, checkpoint_path)
+
+        print(f'Epoch {epoch} Checkpoint Saved!')
+
+    def _load_checkpoint(self, epoch: int) -> None:
+        '''
+        Loads the previous epoch's model and optimizer state dictionaries from its checkpoint file into the current model and optimizer.
 
         Inputs:
-            best_model: a PyTorch model representing a copy of the best model observed during validation.
-
-        Returns: a Boolean indicating if the best model's weights were successfully stored.
+            epoch: the curret epoch number.
         '''
-
-        print('Attempting to save best model weights...')
-        try:
-            torch.save(best_model.state_dict(), self.save_fp)
-
-            return True
-        except Exception:
-            return False
         
-    def run_main_loop(self) -> None:
-        '''
-        Combines the _main_loop and _save_best_weights private functions into a single public location.
+        if epoch > 0:
+            checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch - 1}.pth'
+            assert os.path.exists(checkpoint_path), f'Loading Error: Checkpoint file "{checkpoint_path}" does not exist.'
 
-        Inputs: None.
-        '''
-
-        best_model = self._main_loop()
-
-        if self.save_best_weights:
-            if not self.ddp:
-                save_flag = self._save_model_weights(best_model=best_model)
+            if self.device == 'gpu':
+                checkpoint = torch.load(checkpoint_path, map_location=torch.device('cuda'))
+                if self.ddp:
+                    self.model.module.load_state_dict(checkpoint['model_state'])
+                else:
+                    self.model.load_state_dict(checkpoint['model_state'])
             else:
-                save_flag = self._save_model_weights(best_model=best_model.module)
+                checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+                self.model.load_state_dict(checkpoint['model_state'])
 
-            if save_flag:
-                print('\tSave successful!')
-            else:
-                print('\tSave failed!')
+            self.optimizer.load_state_dict(checkpoint['optim_state'])
+
+            if self.gpu_id == 0:
+                print('Previous Epoch\'s Checkpoint Loaded!')
+    
+    # def _save_model_weights(self, best_model: nn.Module) -> bool:
+    #     '''
+    #     Saves the weights of the best model to the self.save_fp filepath.
+
+    #     Inputs:
+    #         best_model: a PyTorch model representing a copy of the best model observed during validation.
+
+    #     Returns: a Boolean indicating if the best model's weights were successfully stored.
+    #     '''
+
+    #     print('Attempting to save best model weights...')
+    #     try:
+    #         torch.save(best_model.state_dict(), self.save_fp)
+
+    #         return True
+    #     except Exception:
+    #         return False
+        
+    # def run_main_loop(self) -> None:
+    #     '''
+    #     Combines the _main_loop and _save_best_weights private functions into a single public location.
+
+    #     Inputs: None.
+    #     '''
+
+    #     best_model = self._main_loop()
+
+    #     if self.save_best_weights:
+    #         if not self.ddp:
+    #             save_flag = self._save_model_weights(best_model=best_model)
+    #         else:
+    #             save_flag = self._save_model_weights(best_model=best_model.module)
+
+    #         if save_flag:
+    #             print('\tSave successful!')
+    #         else:
+    #             print('\tSave failed!')
