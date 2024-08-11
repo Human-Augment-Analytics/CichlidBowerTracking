@@ -422,6 +422,7 @@ class DataDistiller:
             if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
                 self._save_checkpoint(epoch)
 
+            # synchronize processes
             dist.barrier()
         
         # final print statement
