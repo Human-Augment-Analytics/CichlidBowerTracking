@@ -25,8 +25,9 @@ parser = argparse.ArgumentParser()
 
 # setup arguments
 parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier', 'pyra-tcait'], help='The type of model to be used during training and validation.')
+parser.add_argument('checkpointsdir', type=str, help='The path to the directory where the checkpoint files will be stored.')
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
-parser.add_argument('--num-train-examples', '-t', type=int, default=11797632, help='The number of examples to be used by the training \"dataset\".')
+parser.add_argument('--num-train-examples', '-t', type=int, default=11060223, help='The number of examples to be used by the training \"dataset\".')
 parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
 parser.add_argument('--num-train-batches', '-T', type=int, default=691264, help='The number of batches to be used by the training \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
 parser.add_argument('--num-valid-batches', '-V', type=int, default=23657, help='The number o batches to be used by the validation \"dataset\"; meaningless if option \"--num-train-examples\"/\"-t\" < 1.')
@@ -144,14 +145,14 @@ def main(gpu_id: int, world_size: int):
         print('Creating data distiller...')
 
     distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer, nepochs=args.num_epochs, nclasses=args.num_classes,
-                            save_best_weights=False, save_fp='', device=args.device_type, gpu_id=gpu_id, ddp=args.use_ddp, disable_progress_bar=args.disable_progress_bar)
+                              checkpoints_dir=args.checkpointsdir, device=args.device_type, gpu_id=gpu_id, ddp=args.use_ddp, disable_progress_bar=args.disable_progress_bar)
 
     # perform training/validation
     if args.debug:
         print('Performing testing and validaton...')
     
     start_time = time.time()
-    distiller.run_main_loop()
+    distiller.main_loop()
 
     end_time = time.time()
     time_diff = end_time - start_time
