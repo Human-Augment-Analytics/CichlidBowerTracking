@@ -123,7 +123,7 @@ class DataDistiller:
 
         # condition on dataset type
         if self.use_pairwise_data:
-            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0, disable=self.disable_progress_bar)
+            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
@@ -164,7 +164,7 @@ class DataDistiller:
             return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
         
         elif self.use_triplet_data:
-            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, position=0, disable=self.disable_progress_bar)
+            loop = tqdm.tqdm(self.train_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
             # loop over dataloader to perform training
             epoch_tracker = EpochTracker()
@@ -265,7 +265,7 @@ class DataDistiller:
         self.model.eval()
         with torch.no_grad():
             if self.use_pairwise_data:
-                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1, disable=self.disable_progress_bar)
+                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
                 # loop over dataloader to perform validation
                 epoch_tracker = EpochTracker()
@@ -301,7 +301,7 @@ class DataDistiller:
                 # return the epoch statistics as tracked by the EpochTracker             
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
             elif self.use_triplet_data:
-                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, position=1, disable=self.disable_progress_bar)
+                loop = tqdm.tqdm(self.valid_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
                 # loop over dataloader to perform training
                 epoch_tracker = EpochTracker()
@@ -377,61 +377,6 @@ class DataDistiller:
             else:
                 raise Exception('Invalid dataloader: please use dataloader with either pairwise or triplet-structured dataset.')
     
-    def main_loop(self) -> None:
-        '''
-        Performs the main training/validation loop for self.model.
-
-        Inputs: None.
-
-        Returns:
-            best_model: a PyTorch model representing a copy of the best model observed during validation.
-        '''
-        
-        # loop through passed number of epochs
-        for epoch in range(self.nepochs):
-            # load previous epoch's checkpoint
-            self._load_checkpoint(epoch)
-
-            # epoch start print statement
-            if not self.disable_progress_bar:
-                print('\n' + '-' * 93)
-                print(f'EPOCH [{epoch}/{self.nepochs}]')
-                print('-' * 93)
-
-            # perform training on current epoch
-            if not isinstance(self.model, TCAiT):
-                train_min, train_max, train_avg = self._train(epoch=epoch)
-                self.train_logger.add(train_min, train_max, train_avg)
-            else:
-                train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch)
-                
-                self.train_logger.add(train_min, train_max, train_avg)
-                self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
-
-            # perform validation on current epoch
-            if not isinstance(self.model, TCAiT):
-                valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
-                self.train_logger.add(valid_min, valid_max, valid_avg)
-            else:
-                valid_min, valid_max, valid_avg, valid_acc_min, valid_acc_max, valid_acc_avg = self._validate(epoch=epoch)
-                
-                self.valid_logger.add(valid_min, valid_max, valid_avg)
-                self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
-
-            # save checkpoint
-            if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
-                self._save_checkpoint(epoch)
-
-            # synchronize processes
-            dist.barrier()
-        
-        # final print statement
-        if not self.disable_progress_bar:
-            print('\n' + '=' * 93)
-        print(f'BEST VALIDATION MODEL {"LOSS" if not isinstance(self.model, TCAiT) else "ACCURACY"}: {best_valid_avg:.4f}')
-        if not self.disable_progress_bar:
-            print('=' * 93 + '\n')
-    
     def _save_checkpoint(self, epoch: int) -> None:
         '''
         Saves the current epoch's model and optimizer state dictionaries in a checkpoint file.
@@ -495,6 +440,55 @@ class DataDistiller:
     #         return True
     #     except Exception:
     #         return False
+
+    def main_loop(self) -> None:
+        '''
+        Performs the main training/validation loop for self.model.
+
+        Inputs: None.
+
+        Returns:
+            best_model: a PyTorch model representing a copy of the best model observed during validation.
+        '''
+        
+        # loop through passed number of epochs
+        for epoch in range(self.nepochs):
+            # load previous epoch's checkpoint
+            self._load_checkpoint(epoch)
+
+            # epoch start print statement
+            if not (self.disable_progress_bar or (self.ddp and self.gpu_id != 0)):
+                print('\n' + '-' * 93)
+                print(f'EPOCH [{epoch}/{self.nepochs}]')
+                print('-' * 93)
+
+            # perform training on current epoch
+            if not isinstance(self.model, TCAiT):
+                train_min, train_max, train_avg = self._train(epoch=epoch)
+                self.train_logger.add(train_min, train_max, train_avg)
+            else:
+                train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch)
+                
+                self.train_logger.add(train_min, train_max, train_avg)
+                self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
+
+            # perform validation on current epoch
+            if not isinstance(self.model, TCAiT):
+                valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
+                self.train_logger.add(valid_min, valid_max, valid_avg)
+            else:
+                valid_min, valid_max, valid_avg, valid_acc_min, valid_acc_max, valid_acc_avg = self._validate(epoch=epoch)
+                
+                self.valid_logger.add(valid_min, valid_max, valid_avg)
+                self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
+
+            # save checkpoint
+            if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
+                self._save_checkpoint(epoch)
+
+            # synchronize processes
+            if self.ddp:
+                dist.barrier()
         
     # def run_main_loop(self) -> None:
     #     '''
