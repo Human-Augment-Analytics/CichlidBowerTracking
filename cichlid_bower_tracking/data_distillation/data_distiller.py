@@ -388,7 +388,7 @@ class DataDistiller:
         checkpoint = {
             'epoch': epoch,
             'model_state': self.model.state_dict(),
-            'optim_state': self.model.state_dict()
+            'optim_state': self.optimizer.state_dict()
         }
 
         checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch}.pth'
