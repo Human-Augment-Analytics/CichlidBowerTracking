@@ -26,11 +26,16 @@ def forward(self, anchor: torch.Tensor, positive: torch.Tensor, negative: torch.
     positive_ca = self.positive_cross_attn(anchor, positive)
     negative_ca = self.negative_cross_attn(anchor, negative)
 
-    anchor = anchor + positive_ca - negative_ca # pull (anchor, positive) together, push (anchor, negative) apart
-    positive = positive + positive_ca - negative_ca # pull (positive, anchor) together, push (positive, negative) apart
-    negative = negative - positive_ca - negative_ca # push (negative, positive) and (negative, anchor) apart
+    # assume additional learnable parameters "alpha" and "beta"
+
+    anchor_pure = anchor.clone()
+    anchor_mixed = anchor + alpha * positive_ca - beta * negative_ca # pull (anchor, positive) together, push (anchor, negative) apart
+
+    positive = positive + alpha * positive_ca - beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
+    negative = negative - beta * (positive_ca + negative_ca) # push (negative, positive) and (negative, anchor) apart
     
-    z_anchor = self._reshape_output(anchor) if not self.add_cls else anchor
+    z_anchor = self._reshape_output(anchor_mixed) if not self.add_cls else anchor_pure
+
     z_positive = self._reshape_output(positive) if not self.add_cls else positive
     z_negative = self._reshape_output(negative) if not self.add_cls else negative
 

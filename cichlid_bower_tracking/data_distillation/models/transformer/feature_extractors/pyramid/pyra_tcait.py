@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 from collections import OrderedDict
 
 from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait_stage import PyraTCAiTStage as Stage
+from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait_stage_2 import PyraTCAiTStage2 as Stage2
 
 import torch.nn as nn
 import torch
@@ -9,7 +10,7 @@ import torch
 import math
 
 class PyraTCAiT(nn.Module):
-    def __init__(self, embed_dims: List[int], head_counts: List[int], mlp_ratios: List[int], sr_ratios: List[int], depths: List[int], num_stages=4, dropout=0.1, first_patch_dim=4, in_channels=3, in_dim=224, add_classifier=True, num_classes: Optional[int]=None):
+    def __init__(self, embed_dims: List[int], head_counts: List[int], mlp_ratios: List[int], sr_ratios: List[int], depths: List[int], num_stages=4, dropout=0.1, first_patch_dim=4, in_channels=3, in_dim=224, init_alpha=0.1, init_beta=0.1, add_classifier=True, use_improved=False, classification_intent=False, num_classes: Optional[int]=None):
         '''
         Initializes an instance of the PyraTCAiT class; inspired by "Pyramid Vision Transformer: A Versatile Backbone for Dense Prediction without Convolutions" by Wang et al. (2021.)
 
@@ -49,8 +50,12 @@ class PyraTCAiT(nn.Module):
         self.first_patch_dim = first_patch_dim
         self.in_channels = in_channels
         self.in_dim = in_dim
+        self.init_alpha = init_alpha
+        self.init_beta = init_beta
 
         self.add_classifier = add_classifier
+        self.use_improved = use_improved
+        self.classification_intent = classification_intent
         self.num_classes = num_classes
 
         stages = []
@@ -65,7 +70,19 @@ class PyraTCAiT(nn.Module):
                             dropout=self.dropout,
                             mlp_ratio=self.mlp_ratios[i],
                             sr_ratio=self.sr_ratios[i],
-                            add_cls=(self.add_classifier and i == self.num_stages - 1))
+                            add_cls=(self.add_classifier and i == self.num_stages - 1)) if not self.use_improved \
+                      else Stage2(embed_dim=self.embed_dims[i],
+                                  in_channels=self.in_channels if i == 0 else self.embed_dims[i - 1],
+                                  in_dim=self.in_dim if i == 0 else int(self.in_dim // math.pow(2, i + 1)),
+                                  num_heads=self.head_counts[i],
+                                  depth=self.depths[i], 
+                                  stage_num=i,
+                                  patch_dim=self.first_patch_dim if i == 0 else 2,
+                                  dropout=self.dropout,
+                                  mlp_ratio=self.mlp_ratios[i],
+                                  sr_ratio=self.sr_ratios[i],
+                                  add_cls=(self.add_classifier and i == self.num_stages - 1),
+                                  cls_intent=self.classification_intent)
                         
             stages.append(stage_i)
 
