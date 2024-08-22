@@ -69,6 +69,12 @@ parser.add_argument('--add-classifier', '-A', default=False, action='store_true'
 # shared arguments
 parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option and model is T-CAiT-based); defaults to 16.')
 
+# optimizer and scheduler arguments
+parser.add_argument('--learning-rate', type=float, default=0.001, help='The initial learning rate to be used by the AdamW optimizer.')
+parser.add_argument('--betas', type=float, nargs='+', default=[0.9, 0.999], help='The beta values to be used by the AdamW optimizer.')
+parser.add_argument('--weight-decay', type=float, default=0.00025, help='The weight decay to be used by the AdamW optimizer (default value inspired by Loshchilov and Hutter\'s "Fixing Weight Decay Regularization in Adam", Figure 2).')
+parser.add_argument('--patience', type=int, default=10, help='The number of epochs without improvement before the scheduler reduces the learning rate.')
+
 # miscellaneous arguments
 parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
 parser.add_argument('--disable-progress-bar', default=False, action='store_true', help='Indicates that no progress bar should be printed out during the training/validation processes.')
@@ -127,7 +133,8 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating optimizer...')
     
-    optimizer = optim.Adam(model.parameters())
+    optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, betas=tuple(args.betas), weight_decay=args.weight_decay)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=args.patience)
 
     # create loss function
     if args.debug:
@@ -144,8 +151,8 @@ def main(gpu_id: int, world_size: int):
     if args.debug:
         print('Creating data distiller...')
 
-    distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer, nepochs=args.num_epochs, nclasses=args.num_classes,
-                              checkpoints_dir=args.checkpointsdir, device=args.device_type, gpu_id=gpu_id, ddp=args.use_ddp, disable_progress_bar=args.disable_progress_bar)
+    distiller = DataDistiller(train_dataloader=train_dataloader, valid_dataloader=valid_dataloader, model=model, loss_fn=loss_fn, optimizer=optimizer, scheduler=scheduler, nepochs=args.num_epochs,
+                              nclasses=args.num_classes, checkpoints_dir=args.checkpointsdir, device=args.device_type, gpu_id=gpu_id, ddp=args.use_ddp, disable_progress_bar=args.disable_progress_bar)
 
     # perform training/validation
     if args.debug:

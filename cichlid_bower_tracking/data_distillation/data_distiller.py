@@ -51,8 +51,8 @@ def ddp_setup(rank, world_size):
 
 class DataDistiller:
     def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT], \
-                 loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, nclasses: int, \
-                 checkpoints_dir: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
+                 scheduler: optim.lr_scheduler.ReduceLROnPlateau, loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
+                 nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -89,6 +89,7 @@ class DataDistiller:
 
         self.loss_fn = loss_fn
         self.optimizer = optimizer
+        self.scheduler = scheduler
 
         self.use_pairwise_data = isinstance(self.train_dataloader.dataset, Pairs)
         self.use_triplet_data = isinstance(self.train_dataloader.dataset, Triplets) or isinstance(self.train_dataloader.dataset, TestTriplets)
@@ -481,6 +482,8 @@ class DataDistiller:
                 
                 self.valid_logger.add(valid_min, valid_max, valid_avg)
                 self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
+
+            self.scheduler.step(valid_avg)
 
             # save checkpoint
             if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
