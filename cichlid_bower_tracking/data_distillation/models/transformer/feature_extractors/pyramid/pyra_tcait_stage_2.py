@@ -15,7 +15,7 @@ import math
 class PyraTCAiTStage2(nn.Module):
     def __init__(self, embed_dim: int, in_channels: int, in_dim: int, num_heads: int, depth: int, stage_num: int, patch_dim=4, dropout=0.1, mlp_ratio=8.0, sr_ratio=8, init_alpha=0.1, init_beta=0.1, add_cls=False, cls_intent=False):
         '''
-        Initializes an instance of the PyraTCAiTStage class.
+        Initializes an instance of the PyraTCAiTStage2 class.
 
         Inputs:
             embed_dim: the embedding dimension (number of channels) of the stage's output.
