@@ -70,9 +70,9 @@ parser.add_argument('--add-classifier', '-A', default=False, action='store_true'
 parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option and model is T-CAiT-based); defaults to 16.')
 
 # optimizer and scheduler arguments
-parser.add_argument('--learning-rate', type=float, default=0.001, help='The initial learning rate to be used by the AdamW optimizer.')
+parser.add_argument('--learning-rate', type=float, default=1e-4, help='The initial learning rate to be used by the AdamW optimizer.')
 parser.add_argument('--betas', type=float, nargs='+', default=[0.9, 0.999], help='The beta values to be used by the AdamW optimizer.')
-parser.add_argument('--weight-decay', type=float, default=0.00025, help='The weight decay to be used by the AdamW optimizer (default value inspired by Loshchilov and Hutter\'s "Fixing Weight Decay Regularization in Adam", Figure 2).')
+parser.add_argument('--weight-decay', type=float, default=2.5e-4, help='The weight decay to be used by the AdamW optimizer (default value inspired by Loshchilov and Hutter\'s "Fixing Weight Decay Regularization in Adam", Figure 2).')
 parser.add_argument('--patience', type=int, default=10, help='The number of epochs without improvement before the scheduler reduces the learning rate.')
 
 # miscellaneous arguments
