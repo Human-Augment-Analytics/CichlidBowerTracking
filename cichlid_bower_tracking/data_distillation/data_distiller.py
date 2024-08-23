@@ -392,7 +392,7 @@ class DataDistiller:
             'epoch': epoch,
             'model_state': self.model.state_dict(),
             'optim_state': self.optimizer.state_dict(),
-            'scheduler_state': self.scheduler.state_dict()
+            'sched_state': self.scheduler.state_dict()
         }
 
         checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch}.pth'
@@ -423,7 +423,7 @@ class DataDistiller:
                 self.model.load_state_dict(checkpoint['model_state'])
 
             self.optimizer.load_state_dict(checkpoint['optim_state'])
-            self.scheduler.load_state_dict(checkpoint['scheduler_state'])
+            self.scheduler.load_state_dict(checkpoint['sched_state'])
 
             if self.gpu_id == 0:
                 print('Previous Epoch\'s Checkpoint Loaded!')
