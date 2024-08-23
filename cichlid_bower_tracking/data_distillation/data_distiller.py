@@ -16,6 +16,8 @@ from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
 from data_distillation.losses.triplet_losses.total_triplet_loss import TotalTripletLoss
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss
 
+from data_distillation.optimization.schedulers.warmup_cosine_scheduler import WarmupCosineScheduler
+
 from data_distillation.misc.epoch_tracker import EpochTracker
 from data_distillation.misc.epoch_logger import EpochLogger
 
@@ -51,7 +53,7 @@ def ddp_setup(rank, world_size):
 
 class DataDistiller:
     def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT], \
-                 scheduler: optim.lr_scheduler.ReduceLROnPlateau, loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
+                 scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
                  nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
@@ -389,7 +391,8 @@ class DataDistiller:
         checkpoint = {
             'epoch': epoch,
             'model_state': self.model.state_dict(),
-            'optim_state': self.optimizer.state_dict()
+            'optim_state': self.optimizer.state_dict(),
+            'scheduler_state': self.scheduler.state_dict()
         }
 
         checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch}.pth'
@@ -420,6 +423,7 @@ class DataDistiller:
                 self.model.load_state_dict(checkpoint['model_state'])
 
             self.optimizer.load_state_dict(checkpoint['optim_state'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state'])
 
             if self.gpu_id == 0:
                 print('Previous Epoch\'s Checkpoint Loaded!')
@@ -483,7 +487,10 @@ class DataDistiller:
                 self.valid_logger.add(valid_min, valid_max, valid_avg)
                 self.acc_valid_logger.add(valid_acc_min, valid_acc_max, valid_acc_avg)
 
-            self.scheduler.step(valid_avg)
+            if isinstance(self.scheduler, optim.lr_scheduler.ReduceLROnPlateau):
+                self.scheduler.step(valid_avg)
+            else:
+                self.scheduler.step()
 
             # save checkpoint
             if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:

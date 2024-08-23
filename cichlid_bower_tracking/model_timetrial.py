@@ -8,6 +8,8 @@ from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait 
 from data_distillation.losses.triplet_losses.triplet_classification_loss import TripletClassificationLoss as TCLoss
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
 
+from data_distillation.optimization.schedulers.warmup_cosine_scheduler import WarmupCosineScheduler
+
 from data_distillation.testing.data.test_triplets import TestTriplets
 from data_distillation.data_distiller import DataDistiller, ddp_setup
 
@@ -26,6 +28,7 @@ parser = argparse.ArgumentParser()
 # setup arguments
 parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier', 'pyra-tcait'], help='The type of model to be used during training and validation.')
 parser.add_argument('checkpointsdir', type=str, help='The path to the directory where the checkpoint files will be stored.')
+parser.add_argument('scheduler', type=str, choices=['reduce-on-plateau', 'warmup-cosine'], help='The type of learning rate scheduler to use.')
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both \"datasets\".')
 parser.add_argument('--num-train-examples', '-t', type=int, default=11060223, help='The number of examples to be used by the training \"dataset\".')
 parser.add_argument('--num-valid-examples', '-v', type=int, default=522500, help='The number of examples to be used by the validation \"dataset\".')
@@ -73,7 +76,9 @@ parser.add_argument('--patch-size', '-p', type=int, default=16, help='The patch 
 parser.add_argument('--learning-rate', type=float, default=1e-4, help='The initial learning rate to be used by the AdamW optimizer.')
 parser.add_argument('--betas', type=float, nargs='+', default=[0.9, 0.999], help='The beta values to be used by the AdamW optimizer.')
 parser.add_argument('--weight-decay', type=float, default=2.5e-4, help='The weight decay to be used by the AdamW optimizer (default value inspired by Loshchilov and Hutter\'s "Fixing Weight Decay Regularization in Adam", Figure 2).')
-parser.add_argument('--patience', type=int, default=10, help='The number of epochs without improvement before the scheduler reduces the learning rate.')
+parser.add_argument('--patience', type=int, default=10, help='The number of epochs without improvement before the scheduler reduces the learning rate; only useful for ReduceLROnPlateau scheduler.')
+parser.add_argument('--warmup-epochs', type=int, default=5, help='The number of warmup epochs to be used by the scheduler; only useful for WarmupCosineScheduler.')
+parser.add_argument('--eta-min', type=float, default=0.0, help='The minimum learning rate after cosine annealing; only useful for WarmupCosineScheduler.')
 
 # miscellaneous arguments
 parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
@@ -134,7 +139,10 @@ def main(gpu_id: int, world_size: int):
         print('Creating optimizer...')
     
     optimizer = optim.AdamW(model.parameters(), lr=args.learning_rate, betas=tuple(args.betas), weight_decay=args.weight_decay)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=args.patience)
+    if args.scheduler == 'reduce-on-plateau':
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=args.patience)
+    else:
+        args.scheduler = WarmupCosineScheduler(optimizer=optimizer, warmup_epochs=args.warmup_epochs, total_epochs=args.num_epochs, eta_min=args.eta_min)
 
     # create loss function
     if args.debug:
