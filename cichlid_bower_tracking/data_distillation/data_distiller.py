@@ -54,7 +54,7 @@ def ddp_setup(rank, world_size):
 class DataDistiller:
     def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
-                 nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, ddp=False, disable_progress_bar=False):
+                 nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -67,7 +67,8 @@ class DataDistiller:
             checkpoints_dir: a string representing the local directory path where checkpoints will be saved.
             device: a string indicating the device on which training/validation and distillation will occur (must be either "cpu" or "gpu").
             gpu_id: a string representing the gpu_id to be used.
-            ddp: indicates that the model should be wrapped in a DDP object.
+            start_epoch: an integer representing the first epoch of training (only useful for resuming previous training); defaults to 0.
+            ddp: indicates that the model should be wrapped in a DDP object; defaults to False.
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
@@ -103,6 +104,7 @@ class DataDistiller:
         self.acc_valid_logger = EpochLogger(value_type='Valudation Accuracy')
 
         self.nepochs = nepochs
+        self.start_epoch = start_epoch
         self.nclasses = nclasses
 
         self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
@@ -457,7 +459,7 @@ class DataDistiller:
         '''
         
         # loop through passed number of epochs
-        for epoch in range(self.nepochs):
+        for epoch in range(self.start_epoch, self.nepochs):
             # load previous epoch's checkpoint
             self._load_checkpoint(epoch)
 
