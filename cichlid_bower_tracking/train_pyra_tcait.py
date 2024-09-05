@@ -30,7 +30,7 @@ parser = argparse.ArgumentParser()
 
 # setup arguments
 # parser.add_argument('model', type=str, choices=['tcait', 'tcait-extractor', 'tcait-classifier', 'pyra-tcait'], help='The type of model to be used during training and validation.')
-# parser.add_argument('checkpointsdir', type=str, help='The path to the directory where the checkpoint files will be stored.')
+parser.add_argument('checkpointsdir', type=str, help='The path to the directory where the checkpoint files will be stored.')
 parser.add_argument('task', type=str, choices=['cls', 'reid'], help='The task for which the PyraT-CAiT model should be trained.')
 parser.add_argument('scheduler', type=str, choices=['reduce-on-plateau', 'warmup-cosine'], help='The type of learning rate scheduler to use.')
 parser.add_argument('trainset', type=str, help='The filepath to the dataset to be used in training.')
