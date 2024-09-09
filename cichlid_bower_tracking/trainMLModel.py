@@ -25,7 +25,8 @@ parser.add_argument('--validset', type=str, help='The filepath to the dataset to
 parser.add_argument('--batch-size', '-B', type=int, default=16, help='The size of each batch to be used by both datasets.')
 parser.add_argument('--num-classes', '-n', type=int, default=10450, help='The number of classes to be used in the classifier\'s head MLP; defaults to 10450.')
 parser.add_argument('--channels', '-c', type=int, choices=[1, 3], default=3, help='The number of channels in the images (1 for greyscale, 3 for RGB); defaults to 3.')
-parser.add_argument('--dim', '-b', type=int, default=224, help='The dimension of the images; defaults to 224.')
+parser.add_argument('--train-dim', type=int, default=224, help='The dimension of the images; defaults to 224.')
+parser.add_argument('--valid-dim', type=int, default=256, help='The dimension of the images; defaults to 224.')
 parser.add_argument('--use-ddp', '-U', default=False, action='store_true', help='Indicates whether training should be distributed across multiple GPUs.')
 parser.add_argument('--num-epochs', '-E', type=int, default=1, help='The number of epochs to use in the time trial; defaults to 1.')
 parser.add_argument('--start-epoch', '-e', type=int, default=0, help='The epoch to start training from; only useful if resuming from previous training; defaults to 0.')
@@ -44,12 +45,18 @@ parser.add_argument('--use-improved', '-I', default=False, action='store_true', 
 parser.add_argument('--patch-size', '-p', type=int, default=4, help='The patch size to be used in patch embedding (meaningless if using the \"--use-minipatch\"/\"-m\" option and model is T-CAiT-based); defaults to 16.')
 
 # optimization arguments
+parser.add_argument('--cls-loss', type=str, choices=['standard-ce', 'label-smoothing-ce'], default='standard-ce', help='The type of cross entropy classification loss to use; only meaningful if AnalysisType has prefix "PyraTCAiT".')
 parser.add_argument('--learning-rate', type=float, default=1e-4, help='The initial learning rate to be used by the AdamW optimizer.')
 parser.add_argument('--betas', type=float, nargs='+', default=[0.9, 0.999], help='The beta values to be used by the AdamW optimizer.')
 parser.add_argument('--weight-decay', type=float, default=2.5e-4, help='The weight decay to be used by the AdamW optimizer (default value inspired by Loshchilov and Hutter\'s "Fixing Weight Decay Regularization in Adam", Figure 2).')
 parser.add_argument('--patience', type=int, default=10, help='The number of epochs without improvement before the scheduler reduces the learning rate; only useful for ReduceLROnPlateau scheduler.')
 parser.add_argument('--warmup-epochs', type=int, default=5, help='The number of warmup epochs to be used by the scheduler; only useful for WarmupCosineScheduler.')
 parser.add_argument('--eta-min', type=float, default=0.0, help='The minimum learning rate after cosine annealing; only useful for WarmupCosineScheduler.')
+
+# augmentation arguments
+parser.add_argument('--jitter', type=float, nargs='+', default=[0.4, 0.4, 0.4, 0.1], help='The color jitter augmentation hyperparameters, in the following order: brightness, contrast, saturation, hue.')
+parser.add_argument('--norm-means', type=float, nargs='+', default=[0.485, 0.456, 0.406], help='The RGB color channel means to use in normalizing the data; default values specific to ImageNet.')
+parser.add_argument('--norm-stds', type=float, nargs='+', default=[0.229, 0.224, 0.225], help='The TGB color channel standard deviations to use in normalizing the data; default values specific to ImageNet.')
 
 # misc arguments
 parser.add_argument('--debug', default=False, action='store_true', help='Puts the script in debug mode so it outputs logging messages.')
@@ -116,7 +123,8 @@ elif args.analysisType.split(':')[0] == 'PyraTCAiT':
 	command.extend(['--batch-size', args.batch_size])
 	command.extend(['--num-classes', args.num_classes])
 	command.extend(['--channels', args.channels])
-	command.extend(['--dim', args.dim])
+	command.extend(['--train-dim', args.train_dim])
+	command.extend(['--valid-dim', args.valid_dim])
 	if args.use_ddp:
 		command.extend(['--use-ddp'])
 	command.extend(['--num-epochs', args.num_epochs])
@@ -137,12 +145,18 @@ elif args.analysisType.split(':')[0] == 'PyraTCAiT':
 	command.extend(['--patch-size', args.patch_size])
 
 	# append optimization arguments
+	command.extend(['--cls-loss', args.cls_loss])
 	command.extend(['--learning-rate', args.learning_rate])
 	command.extend(['--betas', ' '.join(args.betas)])
 	command.extend(['--weight-decay', args.weight_decay])
 	command.extend(['--patience', args.patience])
 	command.extend(['--warmup-epochs', args.warmup_epochs])
 	command.extend(['--eta-min', args.eta_min])
+
+	# append augmentation arguments
+	command.extend(['--jitter', ' '.join(args.jitter)])
+	command.extend(['--norm-means', ' '.join(args.norm_means)])
+	command.extend(['--norm-stds', ' '.join(args.norm_stds)])
 
 	# append misc arguments
 	if args.debug:
