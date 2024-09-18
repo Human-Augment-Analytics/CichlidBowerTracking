@@ -25,8 +25,9 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         class_to_images = {k: set(v) for k, v in checkpoint['class_to_images'].items()}
         classes = checkpoint['classes']
         class_to_label = checkpoint['class_to_label']
-        negative_class_count = defaultdict(int, checkpoint['negative_class_count'])
+        negative_image_count = defaultdict(int, checkpoint['negative_image_count'])
         processed_images = set(checkpoint['processed_images'])
+        unused_negatives = set(checkpoint['unused_negatives'])
     else:
         # Collect all image paths and organize them by class
         class_to_images = defaultdict(set)
@@ -40,10 +41,11 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         # Convert class names to integer labels
         classes = sorted(class_to_images.keys())
         class_to_label = {cls: idx for idx, cls in enumerate(classes)}
-        negative_class_count = defaultdict(int)
+        negative_image_count = defaultdict(int)
         processed_images = set()
+        unused_negatives = set(img for images in class_to_images.values() for img in images)
 
-    all_images = [img for images in class_to_images.values() for img in images]
+    all_images = list(unused_negatives.union(processed_images))
     random.shuffle(all_images)
 
     # Open CSV file in append mode
@@ -67,12 +69,24 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
 
             # Find a negative image (from a different class)
             negative_class_candidates = [c for c in classes if c != anchor_class]
-            negative_class_candidates.sort(key=lambda c: negative_class_count[c])
-            negative_class = negative_class_candidates[0]  # Choose the least used class
-            negative_img = random.choice(list(class_to_images[negative_class]))
+            random.shuffle(negative_class_candidates)
+            
+            negative_img = None
+            for neg_class in negative_class_candidates:
+                unused_neg_images = [img for img in class_to_images[neg_class] if img in unused_negatives]
+                if unused_neg_images:
+                    negative_img = unused_neg_images[0]
+                    break
+            
+            if negative_img is None:
+                # If all images have been used as negatives, select the least used one
+                all_neg_candidates = [img for c in negative_class_candidates for img in class_to_images[c]]
+                negative_img = min(all_neg_candidates, key=lambda x: negative_image_count[x])
 
-            # Update negative class usage count
-            negative_class_count[negative_class] += 1
+            # Update negative image usage count
+            negative_image_count[negative_img] += 1
+            if negative_img in unused_negatives:
+                unused_negatives.remove(negative_img)
 
             # Add triplet to CSV
             writer.writerow([anchor_img, positive_img, negative_img, class_to_label[anchor_class]])
@@ -85,8 +99,9 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
                     'class_to_images': {k: list(v) for k, v in class_to_images.items()},
                     'classes': classes,
                     'class_to_label': class_to_label,
-                    'negative_class_count': dict(negative_class_count),
-                    'processed_images': list(processed_images)
+                    'negative_image_count': dict(negative_image_count),
+                    'processed_images': list(processed_images),
+                    'unused_negatives': list(unused_negatives)
                 }
                 save_checkpoint(checkpoint_file, state)
                 
@@ -99,8 +114,9 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         'class_to_images': {k: list(v) for k, v in class_to_images.items()},
         'classes': classes,
         'class_to_label': class_to_label,
-        'negative_class_count': dict(negative_class_count),
-        'processed_images': list(processed_images)
+        'negative_image_count': dict(negative_image_count),
+        'processed_images': list(processed_images),
+        'unused_negatives': list(unused_negatives)
     }
     save_checkpoint(checkpoint_file, state)
 
