@@ -1,0 +1,72 @@
+START OF "gen_triplets_logfile.txt"
+--------------------------------------------------------------------------------------
+
+2024-09-18 17:42:00
+
+--------------------------------------------------------------------------------------
+START OF "gen_triplets_logfile.txt"
+--------------------------------------------------------------------------------------
+
+2024-09-18 17:43:51
+START OF "gen_triplets_logfile.txt"
+--------------------------------------------------------------------------------------
+
+2024-09-18 17:48:43
+START OF "gen_triplets_logfile.txt"
+--------------------------------------------------------------------------------------
+
+2024-09-18 17:53:47
+Processed 10000 images. Batch processing time: 2.11 seconds
+Processed 20000 images. Batch processing time: 2.23 seconds
+Processed 40000 images. Batch processing time: 3.22 seconds
+Processed 90000 images. Batch processing time: 6.41 seconds
+Processed 100000 images. Batch processing time: 2.13 seconds
+Processed 110000 images. Batch processing time: 2.09 seconds
+Processed 130000 images. Batch processing time: 3.21 seconds
+Processed 150000 images. Batch processing time: 3.21 seconds
+Processed 180000 images. Batch processing time: 4.24 seconds
+Processed 190000 images. Batch processing time: 2.13 seconds
+Processed 200000 images. Batch processing time: 2.13 seconds
+Processed 220000 images. Batch processing time: 3.18 seconds
+Processed 240000 images. Batch processing time: 3.22 seconds
+Processed 250000 images. Batch processing time: 2.16 seconds
+Processed 260000 images. Batch processing time: 2.11 seconds
+Processed 270000 images. Batch processing time: 2.14 seconds
+Processed 280000 images. Batch processing time: 2.13 seconds
+Processed 290000 images. Batch processing time: 2.17 seconds
+Processed 310000 images. Batch processing time: 3.26 seconds
+Processed 330000 images. Batch processing time: 3.18 seconds
+Processed 350000 images. Batch processing time: 3.21 seconds
+Processed 360000 images. Batch processing time: 2.15 seconds
+Processed 390000 images. Batch processing time: 4.33 seconds
+Processed 460000 images. Batch processing time: 8.54 seconds
+Processed 470000 images. Batch processing time: 2.20 seconds
+Processed 500000 images. Batch processing time: 4.32 seconds
+Processed 530000 images. Batch processing time: 4.33 seconds
+Processed 570000 images. Batch processing time: 5.41 seconds
+Processed 590000 images. Batch processing time: 3.28 seconds
+Processed 610000 images. Batch processing time: 3.27 seconds
+Processed 660000 images. Batch processing time: 6.46 seconds
+Processed 680000 images. Batch processing time: 3.29 seconds
+Processed 710000 images. Batch processing time: 4.34 seconds
+Processed 750000 images. Batch processing time: 5.37 seconds
+Processed 760000 images. Batch processing time: 2.26 seconds
+Processed 800000 images. Batch processing time: 5.42 seconds
+Processed 820000 images. Batch processing time: 3.31 seconds
+Processed 850000 images. Batch processing time: 4.36 seconds
+Processed 860000 images. Batch processing time: 2.27 seconds
+Processed 870000 images. Batch processing time: 2.26 seconds
+Processed 880000 images. Batch processing time: 2.28 seconds
+Processed 910000 images. Batch processing time: 4.40 seconds
+Processed 950000 images. Batch processing time: 5.48 seconds
+Processed 970000 images. Batch processing time: 3.33 seconds
+Processed 1020000 images. Batch processing time: 6.54 seconds
+Processed 1090000 images. Batch processing time: 8.61 seconds
+Processed 1110000 images. Batch processing time: 3.36 seconds
+Processed 1130000 images. Batch processing time: 3.37 seconds
+Processed 1170000 images. Batch processing time: 5.51 seconds
+Processed 1260000 images. Batch processing time: 10.94 seconds
+Processed 1280000 images. Batch processing time: 3.37 seconds
+Generated triplets for 1281167 images and saved to /home/hice1/cclark339/scratch/Data/ImageNet-1K/imagenet1k-triplets.csv
+
+--------------------------------------------------------------------------------------
