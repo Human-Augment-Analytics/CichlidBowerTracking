@@ -1,4 +1,4 @@
-# inspired by code from Claude 3.5 Sonnet
+# code generated using Claude 3.5 Sonnet
 
 import os
 import argparse
