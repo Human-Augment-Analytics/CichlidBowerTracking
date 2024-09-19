@@ -1,0 +1,8 @@
+Condition 1: Average anchor usage: 1.00
+             Min: 1, Max: 1
+Condition 2: Average positive usage: 1.00
+             Min: 1, Max: 1
+Condition 3: Minimum class usage as negative: 1174
+Condition 4: Average negative usage: 1.02
+             Min: 1, Max: 2
+Plots saved as 'triplet_validation_plots.png'
