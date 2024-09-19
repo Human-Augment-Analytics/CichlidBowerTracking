@@ -27,6 +27,8 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         class_to_label = checkpoint['class_to_label']
         negative_image_count = defaultdict(int, checkpoint['negative_image_count'])
         processed_images = set(checkpoint['processed_images'])
+        unused_positives = {k: set(v) for k, v in checkpoint['unused_positives'].items()}
+        unused_negative_classes = set(checkpoint['unused_negative_classes'])
         unused_negatives = set(checkpoint['unused_negatives'])
     else:
         # Collect all image paths and organize them by class
@@ -43,9 +45,11 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         class_to_label = {cls: idx for idx, cls in enumerate(classes)}
         negative_image_count = defaultdict(int)
         processed_images = set()
+        unused_positives = {cls: set(images) for cls, images in class_to_images.items()}
+        unused_negative_classes = set(classes)
         unused_negatives = set(img for images in class_to_images.values() for img in images)
 
-    all_images = list(unused_negatives.union(processed_images))
+    all_images = list(set(img for images in class_to_images.values() for img in images) - processed_images)
     random.shuffle(all_images)
 
     # Open CSV file in append mode
@@ -56,37 +60,32 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
 
         batch_start_time = time.time()
         for i, anchor_img in enumerate(all_images):
-            if anchor_img in processed_images:
-                continue
-
             anchor_class = os.path.basename(os.path.dirname(anchor_img))
             
             # Find a positive image (different from anchor)
-            positive_candidates = [img for img in class_to_images[anchor_class] if img != anchor_img]
+            positive_candidates = list(unused_positives[anchor_class] - {anchor_img})
             if not positive_candidates:
                 continue
             positive_img = random.choice(positive_candidates)
+            unused_positives[anchor_class].remove(positive_img)
 
             # Find a negative image (from a different class)
-            negative_class_candidates = [c for c in classes if c != anchor_class]
-            random.shuffle(negative_class_candidates)
+            if unused_negative_classes:
+                negative_class = random.choice(list(unused_negative_classes - {anchor_class}))
+                unused_negative_classes.remove(negative_class)
+            else:
+                negative_class = random.choice([c for c in classes if c != anchor_class])
+
+            negative_candidates = [img for img in class_to_images[negative_class] if img in unused_negatives]
+            if not negative_candidates:
+                unused_negatives.update(class_to_images[negative_class])
+                negative_candidates = [img for img in class_to_images[negative_class] if img in unused_negatives]
             
-            negative_img = None
-            for neg_class in negative_class_candidates:
-                unused_neg_images = [img for img in class_to_images[neg_class] if img in unused_negatives]
-                if unused_neg_images:
-                    negative_img = unused_neg_images[0]
-                    break
-            
-            if negative_img is None:
-                # If all images have been used as negatives, select the least used one
-                all_neg_candidates = [img for c in negative_class_candidates for img in class_to_images[c]]
-                negative_img = min(all_neg_candidates, key=lambda x: negative_image_count[x])
+            negative_img = min(negative_candidates, key=lambda img: negative_image_count[img])
+            unused_negatives.remove(negative_img)
 
             # Update negative image usage count
             negative_image_count[negative_img] += 1
-            if negative_img in unused_negatives:
-                unused_negatives.remove(negative_img)
 
             # Add triplet to CSV
             writer.writerow([anchor_img, positive_img, negative_img, class_to_label[anchor_class]])
@@ -101,6 +100,8 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
                     'class_to_label': class_to_label,
                     'negative_image_count': dict(negative_image_count),
                     'processed_images': list(processed_images),
+                    'unused_positives': {k: list(v) for k, v in unused_positives.items()},
+                    'unused_negative_classes': list(unused_negative_classes),
                     'unused_negatives': list(unused_negatives)
                 }
                 save_checkpoint(checkpoint_file, state)
@@ -116,6 +117,8 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
         'class_to_label': class_to_label,
         'negative_image_count': dict(negative_image_count),
         'processed_images': list(processed_images),
+        'unused_positives': {k: list(v) for k, v in unused_positives.items()},
+        'unused_negative_classes': list(unused_negative_classes),
         'unused_negatives': list(unused_negatives)
     }
     save_checkpoint(checkpoint_file, state)
@@ -123,7 +126,7 @@ def generate_triplets(root_dir, output_file, checkpoint_file, batch_size=10000):
     print(f"Generated triplets for {len(processed_images)} images and saved to {output_file}")
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate triplet dataset from ImageNet-1K')
+    parser = argparse.ArgumentParser(description='Generate globally balanced triplet dataset from ImageNet-1K')
     parser.add_argument('root_dir', type=str, help='Root directory of ImageNet-1K dataset')
     parser.add_argument('output_file', type=str, help='Output CSV file path')
     parser.add_argument('checkpoint_file', type=str, help='Checkpoint file path')
