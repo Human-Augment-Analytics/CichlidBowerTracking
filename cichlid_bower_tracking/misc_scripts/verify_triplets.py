@@ -11,6 +11,7 @@ def validate_triplets(csv_file):
     positive_counts = defaultdict(int)
     negative_counts = defaultdict(int)
     negative_class_counts = defaultdict(int)
+    all_images = set()
     
     with open(csv_file, 'r') as f:
         reader = csv.reader(f)
@@ -22,6 +23,7 @@ def validate_triplets(csv_file):
             negative_counts[negative] += 1
             negative_class = negative.split('/')[-2]  # Assumes path format /path/to/class/image.jpg
             negative_class_counts[negative_class] += 1
+            all_images.update([anchor, positive, negative])
     
     # Condition 1: Each image used exactly once as an anchor
     anchor_usage = list(anchor_counts.values())
@@ -45,6 +47,10 @@ def validate_triplets(csv_file):
     print(f"Condition 4: Average negative usage: {avg_negative_usage:.2f}")
     print(f"             Min: {min(negative_usage)}, Max: {max(negative_usage)}")
     
+    # Count images never used as negatives
+    unused_as_negative = len(all_images) - len(negative_counts)
+    print(f"             Images never used as negatives: {unused_as_negative}")
+    
     # Plotting
     fig, axs = plt.subplots(2, 2, figsize=(15, 15))
     
@@ -67,11 +73,17 @@ def validate_triplets(csv_file):
     axs[1, 0].set_xlabel('Class Index (sorted)')
     axs[1, 0].set_ylabel('Times Used as Negative')
     
-    # Negative image usage plot
-    axs[1, 1].hist(negative_usage, bins=20)
+    # Negative image usage plot (including unused count)
+    bins = np.arange(max(negative_usage) + 2) - 0.5
+    counts, _, _ = axs[1, 1].hist(negative_usage, bins=bins, label='Used as Negative')
+    axs[1, 1].bar(-0.5, unused_as_negative, width=1, label='Never Used as Negative', color='red', alpha=0.7)
     axs[1, 1].set_title('Negative Usage Distribution')
     axs[1, 1].set_xlabel('Times Used as Negative')
     axs[1, 1].set_ylabel('Number of Images')
+    axs[1, 1].legend()
+    
+    # Adjust x-axis for better visibility of the 'Never Used' bar
+    axs[1, 1].set_xlim(-1, max(bins))
     
     plt.tight_layout()
     plt.savefig('triplet_validation_plots.png')
