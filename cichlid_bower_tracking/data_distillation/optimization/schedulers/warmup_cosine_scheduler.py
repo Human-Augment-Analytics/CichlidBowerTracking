@@ -18,7 +18,7 @@ class WarmupCosineScheduler(_LRScheduler):
             last_epoch: the epoch number tracker to be used by the scheduler; defaults to -1.
         '''
 
-        super(WarmupCosineScheduler, self).__init__(optimizer, last_epoch=last_epoch)
+        super(WarmupCosineScheduler, self).__init__(optimizer, last_epoch=last_epoch, warmup_epochs=warmup_epochs)
 
         self.warmup_epochs = warmup_epochs
         self.total_epochs = total_epochs
