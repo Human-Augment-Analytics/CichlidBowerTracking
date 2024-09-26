@@ -1,5 +1,5 @@
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
-from timm.loss import LabelSmoothingCrossEntropy
+# from timm.loss import LabelSmoothingCrossEntropy
 
 import torch.nn as nn
 import torch
@@ -19,10 +19,11 @@ class TripletClassificationLoss(nn.Module):
         self.__version__ = '0.1.0'
 
         self.triplet_loss = TripletLoss(margin=margin, p_norm=p_norm)
-        if not use_label_smoothing:
-            self.ce_loss = nn.CrossEntropyLoss()
-        else:
-            self.ce_loss = LabelSmoothingCrossEntropy(smoothing=smoothing)
+        # if not use_label_smoothing:
+        #     self.ce_loss = nn.CrossEntropyLoss()
+        # else:
+        #     self.ce_loss = LabelSmoothingCrossEntropy(smoothing=smoothing)
+        self.ce_loss = nn.CrossEntropyLoss()
 
     def forward(self, z_anchor: torch.Tensor, z_positive: torch.Tensor, z_negative: torch.Tensor, \
                 y_prob: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
