@@ -176,7 +176,7 @@ def main(gpu_id: int, world_size: int):
     if args.scheduler == 'reduce-on-plateau':
         scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer, mode='min', patience=args.patience)
     else:
-        args.scheduler = WarmupCosineScheduler(optimizer=optimizer, warmup_epochs=args.warmup_epochs, total_epochs=args.num_epochs, eta_min=args.eta_min)
+        scheduler = WarmupCosineScheduler(optimizer=optimizer, warmup_epochs=args.warmup_epochs, total_epochs=args.num_epochs, eta_min=args.eta_min)
 
     # create loss function
     if args.debug:
