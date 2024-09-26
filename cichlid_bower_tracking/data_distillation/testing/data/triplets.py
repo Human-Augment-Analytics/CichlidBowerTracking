@@ -47,13 +47,13 @@ class Triplets(Dataset):
         anchor_path, positive_path, negative_path, y_true = self.df.iloc[index]
         anchor, positive, negative = read_image(anchor_path).float(), read_image(positive_path).float(), read_image(negative_path).float()
 
-        assert anchor.shape[0] == 3, f'Anchor @ {anchor_path} is not RGB!'
-        assert positive.shape[0] == 3, f'Positive @ {positive_path} is not RGB!'
-        assert negative.shape[0] == 3, f'Negative @ {negative_path} is not RGB!'
-
         if self.transform:
             anchor = self.transform(anchor)
             positive = self.transform(positive)
             negative = self.transform(negative)
+
+        assert anchor.shape[0] == 3, f'Anchor @ {anchor_path} is not RGB!'
+        assert positive.shape[0] == 3, f'Positive @ {positive_path} is not RGB!'
+        assert negative.shape[0] == 3, f'Negative @ {negative_path} is not RGB!'
 
         return (anchor, positive, negative, y_true)
