@@ -470,7 +470,7 @@ class DataDistiller:
                 print('-' * 93)
 
             # perform training on current epoch
-            if not isinstance(self.model, TCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
                 train_min, train_max, train_avg = self._train(epoch=epoch)
                 self.train_logger.add(train_min, train_max, train_avg)
             else:
@@ -480,7 +480,7 @@ class DataDistiller:
                 self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
 
             # perform validation on current epoch
-            if not isinstance(self.model, TCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
                 valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
                 self.valid_logger.add(valid_min, valid_max, valid_avg)
             else:
