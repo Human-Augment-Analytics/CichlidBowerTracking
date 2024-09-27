@@ -482,7 +482,7 @@ class DataDistiller:
             # perform validation on current epoch
             if not isinstance(self.model, TCAiT):
                 valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
-                self.train_logger.add(valid_min, valid_max, valid_avg)
+                self.valid_logger.add(valid_min, valid_max, valid_avg)
             else:
                 valid_min, valid_max, valid_avg, valid_acc_min, valid_acc_max, valid_acc_avg = self._validate(epoch=epoch)
                 
