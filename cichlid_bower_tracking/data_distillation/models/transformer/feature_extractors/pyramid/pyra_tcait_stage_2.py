@@ -287,8 +287,8 @@ class PyraTCAiTStage2(nn.Module):
         # z_anchor_pure, z_anchor_mixed, z_positive, z_negative = self.tca_block(anchor, positive, negative)
         # z_anchor = self._intent_gate(z_anchor_pure, z_anchor_mixed)
         
-        z_anchor = self._reshape_output(anchor) if not self.add_cls else z_anchor
-        z_positive = self._reshape_output(positive) if not self.add_cls else z_positive
-        z_negative = self._reshape_output(negative) if not self.add_cls else z_negative
+        z_anchor = self._reshape_output(anchor) if not self.add_cls else anchor
+        z_positive = self._reshape_output(positive) if not self.add_cls else positive
+        z_negative = self._reshape_output(negative) if not self.add_cls else negative
 
         return z_anchor, z_positive, z_negative
