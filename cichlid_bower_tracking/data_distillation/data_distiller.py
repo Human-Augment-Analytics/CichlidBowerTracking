@@ -243,7 +243,7 @@ class DataDistiller:
                     loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
 
             # return the epoch statistics as tracked by the EpochTracker
-            if not isinstance(self.model, TCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
             else:
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
@@ -375,7 +375,7 @@ class DataDistiller:
                         loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
 
                 # return the epoch statistics as tracked by the EpochTracker 
-                if not isinstance(self.model, TCAiT):
+                if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
                     return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
                 else:
                     return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
