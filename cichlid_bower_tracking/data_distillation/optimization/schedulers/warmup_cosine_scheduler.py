@@ -22,7 +22,7 @@ class WarmupCosineScheduler(_LRScheduler):
         self.total_epochs = total_epochs
         self.eta_min = eta_min
 
-        super(WarmupCosineScheduler, self).__init__(optimizer)
+        super(WarmupCosineScheduler, self).__init__(optimizer, last_epoch=last_epoch)
 
     def get_lr(self) -> List[float]:
         '''
@@ -36,5 +36,5 @@ class WarmupCosineScheduler(_LRScheduler):
         if self.last_epoch < self.warmup_epochs:
             return [(base_lr * self.last_epoch / self.warmup_epochs) for base_lr in self.base_lrs]
         else:
-            return [self.eta_min + 0.5 * (base_lr - self.eta_min) * (1 + math.cos(math.pi * (self.last_epoch - self.warmup_epochs))) for base_lr in self.base_lrs]
+            return [self.eta_min + 0.5 * (base_lr - self.eta_min) * (1 + math.cos(math.pi * (self.last_epoch - self.warmup_epochs) / (self.total_epochs - self.warmup_epochs))) for base_lr in self.base_lrs]
         
