@@ -10,6 +10,7 @@ from data_distillation.models.transformer.autoencoders.triplet_vit_autoencoder i
 from data_distillation.models.transformer.feature_extractors.tcait_extractor import TCAiTExtractor
 from data_distillation.models.transformer.feature_extractors.triplet_cross_attention_vit import TripletCrossAttentionViT as TCAiT
 from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait import PyraTCAiT
+from data_distillation.models.transformer.feature_extractors.pyramid.pyramid_vision_transformer import PyramidVisionTransformer as PVT
 
 from data_distillation.losses.pairwise_losses.total_siamese_loss import TotalSiameseLoss
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
@@ -52,7 +53,7 @@ def ddp_setup(rank, world_size):
     init_process_group(backend='nccl', rank=rank, world_size=world_size)
 
 class DataDistiller:
-    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT], \
+    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
                  nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
         '''
@@ -186,13 +187,13 @@ class DataDistiller:
                     y = y.to(self.gpu_id)
                 
                 # depending on model type, expect different outputs from forward pass
-                if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT):
+                if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT) or isinstance(self.model, PVT):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
                     if Y is not None:
                         y_prob = torch.softmax(Y, dim=1)
                         y_pred = y_prob.argmax(dim=1)
-                elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT)):
+                elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT) or isinstance(self.model, PVT)):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
                     if Y is not None:
@@ -207,7 +208,7 @@ class DataDistiller:
                 elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                     z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                 else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
+                    raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
 
                 # calculate loss using passed loss_fn
                 if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -237,13 +238,13 @@ class DataDistiller:
 
                 # update progress bar
                 loop.set_description(f'Training, Batch [{batch}/{nbatches}]')
-                if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+                if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                     loop.set_postfix(loss=epoch_tracker.avg)
                 else:
                     loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
 
             # return the epoch statistics as tracked by the EpochTracker
-            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
             else:
                 return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
@@ -323,13 +324,13 @@ class DataDistiller:
                         y = y.to(self.gpu_id)
                     
                     # depending on model type, expect different outputs from forward pass
-                    if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT):
+                    if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT) or isinstance(self.model, PVT):
                         z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
                         if Y is not None:
                             y_prob = torch.softmax(Y, dim=1)
                             y_pred = y_prob.argmax(dim=1)
-                    elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT)):
+                    elif self.ddp and (isinstance(self.model.module, TCAiT) or isinstance(self.model.module, PyraTCAiT) or isinstance(self.model, PVT)):
                         z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
                         if Y is not None:
@@ -344,7 +345,7 @@ class DataDistiller:
                     elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                         z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, TripletAutoencoder, or TripletViTAutoencoder.')
+                        raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -369,13 +370,13 @@ class DataDistiller:
 
                     # update progress bar
                     loop.set_description(f'Validation, Batch [{batch}/{nbatches}]')
-                    if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+                    if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                         loop.set_postfix(loss=epoch_tracker.avg)
                     else:
                         loop.set_postfix(loss=epoch_tracker.avg, accuracy=acc_tracker.avg)
 
                 # return the epoch statistics as tracked by the EpochTracker 
-                if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+                if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                     return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
                 else:
                     return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg, acc_tracker.min, acc_tracker.max, acc_tracker.avg
@@ -470,7 +471,7 @@ class DataDistiller:
                 print('-' * 93)
 
             # perform training on current epoch
-            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                 train_min, train_max, train_avg = self._train(epoch=epoch)
                 self.train_logger.add(train_min, train_max, train_avg)
             else:
@@ -480,7 +481,7 @@ class DataDistiller:
                 self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
 
             # perform validation on current epoch
-            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT):
+            if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                 valid_min, valid_max, valid_avg = self._validate(epoch=epoch)
                 self.valid_logger.add(valid_min, valid_max, valid_avg)
             else:
