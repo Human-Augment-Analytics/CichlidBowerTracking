@@ -46,27 +46,30 @@ class TripletCrossAttentionTransformerBlock(nn.Module):
         negative_ca = self.negative_cross_attn(z_anchor, z_negative)
 
         # add cross attention outputs multiplied by alpha and beta parameters (alpha for pull, beta for push)
-        z_anchor_pure = z_anchor.clone() # clone pure anchor for classification
-        z_anchor_mixed = z_anchor + self.alpha * positive_ca - self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
+        # z_anchor_pure = z_anchor.clone() # clone pure anchor for classification
+        # z_anchor_mixed = z_anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
 
-        z_positive = z_positive + self.alpha * positive_ca - self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
-        z_negative = z_negative - self.beta * (positive_ca + negative_ca) # push (negative, positive) and (negative, anchor) apart
+        z_anchor = z_anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
+        z_positive = z_positive + self.alpha * positive_ca + self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
+        z_negative = z_negative + self.alpha * positive_ca + self.beta * negative_ca # push (negative, positive) and (negative, anchor) apart
 
         # pass through second layer norm
-        z_anchor_pure = self.norm2(z_anchor_pure)
-        z_anchor_mixed = self.norm2(z_anchor_mixed)
+        # z_anchor_pure = self.norm2(z_anchor_pure)
+        # z_anchor_mixed = self.norm2(z_anchor_mixed)
 
-        z_positive = self.norm2(z_positive)
-        z_negative = self.norm2(z_negative)
+        z_anchor = z_anchor + self.mlp(self.norm2(z_anchor))
+        z_positive = z_positive + self.mlp(self.norm2(z_positive))
+        z_negative = z_negative + self.mlp(self.norm2(z_negative))
 
         # pass through MLP
-        z_anchor_pure = self.mlp(z_anchor_pure)
-        z_anchor_mixed = self.mlp(z_anchor_mixed)
+        # z_anchor_pure = self.mlp(z_anchor_pure)
+        # z_anchor_mixed = self.mlp(z_anchor_mixed)
 
-        z_positive = self.mlp(z_positive)
-        z_negative = self.mlp(z_negative)
+        # z_positive = self.mlp(z_positive)
+        # z_negative = self.mlp(z_negative)
 
         # return all
-        return z_anchor_pure, z_anchor_mixed, z_positive, z_negative
+        # return z_anchor_pure, z_anchor_mixed, z_positive, z_negative
+        return z_anchor, z_positive, z_negative
 
 
