@@ -7,6 +7,7 @@ from data_distillation.models.transformer.feature_extractors.pyramid.pyra_tcait_
 import torch.nn as nn
 import torch
 
+import timm
 import math
 
 class PyraTCAiT(nn.Module):
@@ -93,6 +94,8 @@ class PyraTCAiT(nn.Module):
 
             self.mlp = nn.Linear(in_features=self.embed_dims[-1], out_features=self.num_classes)
 
+        self.apply(self._init_weights)
+
     def __str__(self) -> str:
         '''
         Returns a string representation of the current PyraTCAiT model.
@@ -138,6 +141,30 @@ class PyraTCAiT(nn.Module):
         string = stages_string + footer_string + classifier_string
 
         return string
+    
+    def _init_weights(self, m: nn.Module) -> None:
+        '''
+        Given a module, initializes the weights.
+
+        Input:
+            m: a PyTorch module.
+
+        Returns: nothing.
+        '''
+
+        if isinstance(m, nn.Linear):
+            timm.layers.trunc_normal_(m.weight, std=0.02)
+
+            if m.bias is not None:
+                nn.init.constant_(m.bias, 0.0)
+        elif isinstance(m, nn.Conv2d):
+            fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+            fan_out //= m.groups
+
+            m.weight.data.normal_(0, math.sqrt(2.0 / fan_out))
+
+            if m.bias is not None:
+                m.bias.data.zero_()
     
     def _replace_classifier(self, new_num_classes: int) -> int:
         '''
