@@ -7,13 +7,14 @@ import timm
 import math
 
 class PyramidVisionTransformer(nn.Module):
-    def __init__(self, name: str, num_classes: int, drop_rate=0.0, pretrained=False):
+    def __init__(self, name: str, num_classes: int, embed_dim=512, drop_rate=0.0, pretrained=False):
         '''
         Initializes the PyramidVisionTransformer (PVT) wrapper class.
 
         Inputs:
             name: the name of the PVT variant to use as the backbone.
             num_classes: the number of classes to be used in prediction.
+            embed_dim: the final embedding dimension of the model.
             drop_rate: the dropout rate to use in the MLP head.
             pretrained: indicates whether or not a pre-trained backbone PVT should be used.
         '''
@@ -23,12 +24,13 @@ class PyramidVisionTransformer(nn.Module):
 
         self.name = name
         self.num_classes = num_classes
+        self.embed_dim = embed_dim
         self.drop_rate = drop_rate
         self.pretrained = pretrained
 
         self.model = timm.create_model(self.name, pretrained=pretrained, features_only=True)
         self.head_dropout = nn.Dropout(self.drop_rate)
-        self.head = nn.Linear(self.model.embed_dims[-1], self.num_classes)
+        self.head = nn.Linear(self.embed_dim, self.num_classes)
 
         self.apply(self._init_weights)
 
@@ -68,7 +70,7 @@ class PyramidVisionTransformer(nn.Module):
             z_negative: the output negative embedding from the last stage of the PVT backbone.
             pred: the output predictions for the anchor from the MLP head.
         '''
-        
+
         z_anchor = self.model(anchor)[-1]
         z_positive = self.model(positive)[-1]
         z_negative = self.model(negative)[-1]
