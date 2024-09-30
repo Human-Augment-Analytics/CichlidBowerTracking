@@ -246,8 +246,8 @@ class PyraTCAiT(nn.Module):
             # anchor_cls = anchor[:, 0]
             # pred = self.mlp(anchor_cls)
 
-            print(f'anchor shape: {anchor.shape}')
-            print(f'mlp.weight shape: {self.mlp.weight.shape}')
+            # print(f'anchor shape: {anchor.shape}')
+            # print(f'mlp.weight shape: {self.mlp.weight.shape}')
 
             pred = self.mlp(self.drop(anchor.mean(dim=1)))
 
