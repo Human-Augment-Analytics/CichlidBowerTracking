@@ -249,7 +249,7 @@ class PyraTCAiT(nn.Module):
             print(f'anchor shape: {anchor.shape}')
             print(f'mlp.weight shape: {self.mlp.weight.shape}')
 
-            pred = self.mlp(self.drop(anchor.mean(dim=(-1, -2))))
+            pred = self.mlp(self.drop(anchor.mean(dim=1)))
 
         z_anchor, z_positive, z_negative = anchor, positive, negative
 
