@@ -51,19 +51,23 @@ class PyraTCAiTStage2(nn.Module):
         self.cls_intent = cls_intent
 
         self.patcher = PatchEmbedding(embed_dim=self.embed_dim, in_channels=self.in_channels, patch_dim=self.patch_dim, add_norm=True)
-        if self.add_cls:
-            self.anchor_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
-            self.positive_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
-            self.negative_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        # if self.add_cls:
+        #     self.anchor_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        #     self.positive_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
+        #     self.negative_cls_tokenizer = CLSTokens(embed_dim=self.embed_dim)
         
-        self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
-        self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
-        self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        # self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        # self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
+        # self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
 
-        # self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth - 1)])
-        self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
+        self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+        self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+        self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
 
-        # self.tca_block = TCABlock(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, init_alpha=self.init_alpha, init_beta=self.init_beta, add_one=self.add_cls)
+        self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth - 1)])
+        # self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
+
+        self.tca_block = TCABlock(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, init_alpha=self.init_alpha, init_beta=self.init_beta, add_one=self.add_cls)
 
     def __str__(self) -> str:
         '''
@@ -116,10 +120,10 @@ class PyraTCAiTStage2(nn.Module):
         positive_embed = self.patcher(positive)
         negative_embed = self.patcher(negative)
 
-        if self.add_cls:
-            anchor_embed = self.anchor_cls_tokenizer(anchor_embed)
-            positive_embed = self.positive_cls_tokenizer(positive_embed)
-            negative_embed = self.negative_cls_tokenizer(negative_embed)
+        # if self.add_cls:
+        #     anchor_embed = self.anchor_cls_tokenizer(anchor_embed)
+        #     positive_embed = self.positive_cls_tokenizer(positive_embed)
+        #     negative_embed = self.negative_cls_tokenizer(negative_embed)
 
         anchor_embed = self.anchor_pos_encoder(anchor_embed)
         positive_embed = self.positive_pos_encoder(positive_embed)
@@ -218,21 +222,21 @@ class PyraTCAiTStage2(nn.Module):
         # return new positional embeddings
         return anchor_new_pos_embedding, positive_new_pos_embedding, negative_new_pos_embedding
     
-    def _intent_gate(self, z_anchor_pure: torch.Tensor, z_anchor_mixed: torch.Tensor) -> torch.Tensor:
-        '''
-        Modeled after a logic gate, returns the appropriate anchor embedding depending on the value of self.cls_intent.
+    # def _intent_gate(self, z_anchor_pure: torch.Tensor, z_anchor_mixed: torch.Tensor) -> torch.Tensor:
+    #     '''
+    #     Modeled after a logic gate, returns the appropriate anchor embedding depending on the value of self.cls_intent.
 
-        Inputs:
-            z_anchor_pure: The pure anchor embedding (absent any cross attention tainting), useful for classification.
-            z_anchor_mixed: The anchor embedding mixed with positive and negative cross attention, useful for reID.
+    #     Inputs:
+    #         z_anchor_pure: The pure anchor embedding (absent any cross attention tainting), useful for classification.
+    #         z_anchor_mixed: The anchor embedding mixed with positive and negative cross attention, useful for reID.
 
-        Returns:
-            z_anchor: the appropriate anchor embedding given the value of self.cls_intent.
-        '''
+    #     Returns:
+    #         z_anchor: the appropriate anchor embedding given the value of self.cls_intent.
+    #     '''
 
-        z_anchor = z_anchor_mixed if not self.cls_intent else z_anchor_pure
+    #     z_anchor = z_anchor_mixed if not self.cls_intent else z_anchor_pure
 
-        return z_anchor
+    #     return z_anchor
     
     def prepare_for_finetuning(self, new_dim: int) -> int:
         '''

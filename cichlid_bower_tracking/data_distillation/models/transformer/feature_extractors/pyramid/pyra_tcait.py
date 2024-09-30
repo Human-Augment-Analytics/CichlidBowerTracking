@@ -11,7 +11,7 @@ import timm
 import math
 
 class PyraTCAiT(nn.Module):
-    def __init__(self, embed_dims: List[int], head_counts: List[int], mlp_ratios: List[int], sr_ratios: List[int], depths: List[int], num_stages=4, dropout=0.1, first_patch_dim=4, in_channels=3, in_dim=224, init_alpha=0.1, init_beta=0.1, add_classifier=True, use_improved=False, classification_intent=False, num_classes: Optional[int]=None):
+    def __init__(self, embed_dims: List[int], head_counts: List[int], mlp_ratios: List[int], sr_ratios: List[int], depths: List[int], num_stages=4, dropout=0.1, first_patch_dim=4, in_channels=3, in_dim=224, init_alpha=0.0, init_beta=0.0, add_classifier=True, use_improved=False, classification_intent=False, num_classes: Optional[int]=None):
         '''
         Initializes an instance of the PyraTCAiT class; inspired by "Pyramid Vision Transformer: A Versatile Backbone for Dense Prediction without Convolutions" by Wang et al. (2021.)
 
@@ -92,6 +92,7 @@ class PyraTCAiT(nn.Module):
         if self.add_classifier:
             assert self.num_classes is not None and self.num_classes > 0, f'Invalid num_classes input: should be an integer greater than 0 to use classifier (got {self.num_classes})'
 
+            self.drop = nn.Dropout(self.dropout)
             self.mlp = nn.Linear(in_features=self.embed_dims[-1], out_features=self.num_classes)
 
         self.apply(self._init_weights)
@@ -242,8 +243,10 @@ class PyraTCAiT(nn.Module):
 
         pred = None
         if self.add_classifier:
-            anchor_cls = anchor[:, 0]
-            pred = self.mlp(anchor_cls)
+            # anchor_cls = anchor[:, 0]
+            # pred = self.mlp(anchor_cls)
+
+            pred = self.mlp(self.drop(anchor.mean(dim=(-1, -2))))
 
         z_anchor, z_positive, z_negative = anchor, positive, negative
 
