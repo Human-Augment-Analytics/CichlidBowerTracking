@@ -21,9 +21,13 @@ class TripletCrossAttentionTransformerBlock(nn.Module):
 
         self.norm1 = nn.LayerNorm(normalized_shape=self.embed_dim)
 
-        self.alpha = nn.Parameter(torch.zeros(1, self.n_patches + 1 * self.add_one, self.embed_dim).fill_(torch.tensor(self.init_alpha)))
-        self.beta = nn.Parameter(torch.zeros(1, self.n_patches + 1 * self.add_one, self.embed_dim).fill_(torch.tensor(self.init_beta)))
+        # self.alpha = nn.Parameter(torch.zeros(1, self.n_patches + 1 * self.add_one, self.embed_dim).fill_(torch.tensor(self.init_alpha)))
+        # self.beta = nn.Parameter(torch.zeros(1, self.n_patches + 1 * self.add_one, self.embed_dim).fill_(torch.tensor(self.init_beta)))
         
+        self.alpha = nn.Parameter(torch.zeros(1, self.n_patches, self.embed_dim).fill_(torch.tensor(self.init_alpha)))
+        self.beta = nn.Parameter(torch.zeros(1, self.n_patches, self.embed_dim).fill_(torch.tensor(self.init_beta)))
+        
+
         self.positive_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.n_heads, dropout=self.p_dropout)
         self.negative_cross_attn = CrossAttention(embed_dim=self.embed_dim, num_heads=self.n_heads, dropout=self.p_dropout)
 
