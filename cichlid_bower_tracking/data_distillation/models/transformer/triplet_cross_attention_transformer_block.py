@@ -53,13 +53,13 @@ class TripletCrossAttentionTransformerBlock(nn.Module):
         # z_anchor_pure = z_anchor.clone() # clone pure anchor for classification
         # z_anchor_mixed = z_anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
 
-        # z_anchor = z_anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
-        # z_positive = z_positive + self.alpha * positive_ca + self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
-        # z_negative = z_negative + self.alpha * positive_ca + self.beta * negative_ca # push (negative, positive) and (negative, anchor) apart
+        z_anchor = z_anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
+        z_positive = z_positive + self.alpha * positive_ca + self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
+        z_negative = z_negative + self.alpha * positive_ca + self.beta * negative_ca # push (negative, positive) and (negative, anchor) apart
 
-        z_anchor = anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
-        z_positive = positive + self.alpha * positive_ca + self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
-        z_negative = negative + self.alpha * positive_ca + self.beta * negative_ca # push (negative, positive) and (negative, anchor) apart
+        # z_anchor = anchor + self.alpha * positive_ca + self.beta * negative_ca # generate mixed anchor for reID; pull (anchor, positive) together, push (anchor, negative) apart
+        # z_positive = positive + self.alpha * positive_ca + self.beta * negative_ca # pull (positive, anchor) together, push (positive, negative) apart
+        # z_negative = negative + self.alpha * positive_ca + self.beta * negative_ca # push (negative, positive) and (negative, anchor) apart
 
 
         # pass through second layer norm
