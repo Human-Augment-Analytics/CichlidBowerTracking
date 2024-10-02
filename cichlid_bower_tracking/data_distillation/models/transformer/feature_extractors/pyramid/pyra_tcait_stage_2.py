@@ -64,8 +64,8 @@ class PyraTCAiTStage2(nn.Module):
         self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
         self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
 
-        # self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth - 1)])
-        self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
+        self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth - 1)])
+        # self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
 
         # self.tca_block = TCABlock(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, init_alpha=self.init_alpha, init_beta=self.init_beta, add_one=self.add_cls)
 
@@ -289,7 +289,7 @@ class PyraTCAiTStage2(nn.Module):
             negative = block(negative)
         
         z_anchor, z_positive, z_negative = anchor, positive, negative
-        # z_anchor, z_positive, z_negative = self.tca_block(z_anchor, z_positive, z_negative)
+        z_anchor, z_positive, z_negative = self.tca_block(z_anchor, z_positive, z_negative)
         # z_anchor = self._intent_gate(z_anchor_pure, z_anchor_mixed)
         
         z_anchor = self._reshape_output(z_anchor) if not self.add_cls else z_anchor
