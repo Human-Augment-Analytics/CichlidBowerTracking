@@ -167,7 +167,7 @@ video_sets:
   ```
 - If the script could not get to a first training step and threw error, inspect this YAML file that controls some training settings: `.../dlc_model-student-2023-07-26/dlc-models-pytorch/iteration-0/dlc_modelJul26-trainset95shuffle1/train/pytorch_config.yaml`
 
-  - If there is the CUDA OutOfMemory error, you need to request a compute node with larger GPU memory, or reduce the batch size by half.
+  - If there is the CUDA OutOfMemory error, you need to request a compute node with larger GPU memory, or reduce the batch size by half. You'll also need to decide how many epochs to train via the settings below.
 
   ```
   ...
@@ -176,7 +176,7 @@ video_sets:
   dataloader_workers: 0
   dataloader_pin_memory: false
   display_iters: 100
-  epochs: 100
+  epochs: 180
   seed: 42
   ```
 
@@ -242,7 +242,7 @@ video_sets:
   #SBATCH --gres=gpu:H100:1
   #SBATCH --cpus-per-task=4
   #SBATCH --mem=64GB
-  #SBATCH -t0-08:00:00     # Requesting 8 hours, which seems to be enough to run 90 epochs
+  #SBATCH -t0-08:00:00     # If requesting 8 hours, enough to run 90 epochs. If 180 epochs, may need 16 hours.
   #SBATCH -oDLC_Training_Test1_Report-%j.out                
   #SBATCH --mail-type=BEGIN,END,FAIL
 
