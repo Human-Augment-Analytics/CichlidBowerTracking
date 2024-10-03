@@ -60,13 +60,15 @@ class PyraTCAiTStage2(nn.Module):
         # self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
         # self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=self.add_cls)
 
-        self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
-        self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
-        self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+        # self.anchor_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+        # self.positive_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+        # self.negative_pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
+
+        self.pos_encoder = PositionalEncoding(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), add_one=False)
 
         self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth - 1)])
         # self.transformer_stack = nn.Sequential(*[TransformerBlock(embed_dim=self.embed_dim, n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, use_sra=True, sr_ratio=self.sr_ratio) for _ in range(self.depth)])
-
+        
         self.tca_block = TCABlock(embed_dim=self.embed_dim, n_patches=self.patcher.get_num_patches(self.in_dim), n_heads=self.num_heads, p_dropout=self.dropout, mlp_ratio=self.mlp_ratio, init_alpha=self.init_alpha, init_beta=self.init_beta, add_one=self.add_cls)
 
     def __str__(self) -> str:
@@ -125,9 +127,9 @@ class PyraTCAiTStage2(nn.Module):
         #     positive_embed = self.positive_cls_tokenizer(positive_embed)
         #     negative_embed = self.negative_cls_tokenizer(negative_embed)
 
-        anchor_embed = self.anchor_pos_encoder(anchor_embed)
-        positive_embed = self.positive_pos_encoder(positive_embed)
-        negative_embed = self.negative_pos_encoder(negative_embed)
+        anchor_embed = self.pos_encoder(anchor_embed)
+        positive_embed = self.pos_encoder(positive_embed)
+        negative_embed = self.pos_encoder(negative_embed)
 
         return anchor_embed, positive_embed, negative_embed
     
@@ -172,55 +174,74 @@ class PyraTCAiTStage2(nn.Module):
             return self.anchor_pos_encoder.pos_embedding, self.positive_pos_encoder.pos_embedding, self.negative_pos_encoder.pos_embedding
         
         # interpolate anchor positional encoding weights
-        anchor_class_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 0]
-        anchor_old_patch_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 1:]
+        # anchor_class_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 0]
+        # anchor_old_patch_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 1:]
 
-        old_size = int(math.sqrt(old_n_patches))
-        new_size = int(math.sqrt(new_n_patches))
+        # old_size = int(math.sqrt(old_n_patches))
+        # new_size = int(math.sqrt(new_n_patches))
 
-        anchor_new_patch_pos_embedding = F.interpolate(
-            anchor_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
-            size=(new_size, new_size),
-            mode='bicubic'
-        )
+        # anchor_new_patch_pos_embedding = F.interpolate(
+        #     anchor_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+        #     size=(new_size, new_size),
+        #     mode='bicubic'
+        # )
 
-        anchor_new_patch_pos_embedding = anchor_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
-        anchor_new_pos_embedding = torch.cat((anchor_class_pos_embedding.unsqueeze(0), anchor_new_patch_pos_embedding), dim=1)
+        # anchor_new_patch_pos_embedding = anchor_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        # anchor_new_pos_embedding = torch.cat((anchor_class_pos_embedding.unsqueeze(0), anchor_new_patch_pos_embedding), dim=1)
 
-        # interpolate positive positional encoding weights
-        positive_class_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 0]
-        positive_old_patch_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 1:]
+        # # interpolate positive positional encoding weights
+        # positive_class_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 0]
+        # positive_old_patch_pos_embedding = self.positive_pos_encoder.pos_embedding[:, 1:]
 
-        old_size = int(math.sqrt(old_n_patches))
-        new_size = int(math.sqrt(new_n_patches))
+        # old_size = int(math.sqrt(old_n_patches))
+        # new_size = int(math.sqrt(new_n_patches))
 
-        positive_new_patch_pos_embedding = F.interpolate(
-            positive_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
-            size=(new_size, new_size),
-            mode='bicubic'
-        )
+        # positive_new_patch_pos_embedding = F.interpolate(
+        #     positive_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+        #     size=(new_size, new_size),
+        #     mode='bicubic'
+        # )
 
-        positive_new_patch_pos_embedding = positive_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
-        positive_new_pos_embedding = torch.cat((positive_class_pos_embedding.unsqueeze(0), positive_new_patch_pos_embedding), dim=1)
+        # positive_new_patch_pos_embedding = positive_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        # positive_new_pos_embedding = torch.cat((positive_class_pos_embedding.unsqueeze(0), positive_new_patch_pos_embedding), dim=1)
 
-        # interpolate negative positional encoding weights
-        negative_class_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 0]
-        negative_old_patch_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 1:]
+        # # interpolate negative positional encoding weights
+        # negative_class_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 0]
+        # negative_old_patch_pos_embedding = self.negative_pos_encoder.pos_embedding[:, 1:]
 
-        old_size = int(math.sqrt(old_n_patches))
-        new_size = int(math.sqrt(new_n_patches))
+        # old_size = int(math.sqrt(old_n_patches))
+        # new_size = int(math.sqrt(new_n_patches))
 
-        negative_new_patch_pos_embedding = F.interpolate(
-            negative_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
-            size=(new_size, new_size),
-            mode='bicubic'
-        )
+        # negative_new_patch_pos_embedding = F.interpolate(
+        #     negative_old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+        #     size=(new_size, new_size),
+        #     mode='bicubic'
+        # )
 
-        negative_new_patch_pos_embedding = negative_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
-        negative_new_pos_embedding = torch.cat((negative_class_pos_embedding.unsqueeze(0), negative_new_patch_pos_embedding), dim=1)
+        # negative_new_patch_pos_embedding = negative_new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        # negative_new_pos_embedding = torch.cat((negative_class_pos_embedding.unsqueeze(0), negative_new_patch_pos_embedding), dim=1)
         
+        # interpolate positional encoding
+        pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 0]
+        old_patch_pos_embedding = self.anchor_pos_encoder.pos_embedding[:, 1:]
+
+        old_size = int(math.sqrt(old_n_patches))
+        new_size = int(math.sqrt(new_n_patches))
+
+        new_patch_pos_embedding = F.interpolate(
+            old_patch_pos_embedding.reshape(1, old_size, old_size, self.embed_dim).permute(0, 3, 1, 2),
+            size=(new_size, new_size),
+            mode='bicubic'
+        )
+
+        new_patch_pos_embedding = new_patch_pos_embedding.premute(0, 2, 3, 1).view(1, -1, self.embed_dim)
+        new_pos_embedding = torch.cat((pos_embedding.unsqueeze(0), new_patch_pos_embedding), dim=1)
+
+
         # return new positional embeddings
-        return anchor_new_pos_embedding, positive_new_pos_embedding, negative_new_pos_embedding
+        # return anchor_new_pos_embedding, positive_new_pos_embedding, negative_new_pos_embedding
+
+        return new_pos_embedding
     
     # def _intent_gate(self, z_anchor_pure: torch.Tensor, z_anchor_mixed: torch.Tensor) -> torch.Tensor:
     #     '''
@@ -252,14 +273,19 @@ class PyraTCAiTStage2(nn.Module):
         assert new_dim % self.patch_dim == 0
 
         new_num_patches = self.patcher.get_num_patches(self.in_dim)
-        self.anchor_pos_encoder.n_patches = new_num_patches
-        self.positive_pos_encoder.n_patches = new_num_patches
-        self.negative_pos_encoder.n_patches = new_num_patches
+        
+        # self.anchor_pos_encoder.n_patches = new_num_patches
+        # self.positive_pos_encoder.n_patches = new_num_patches
+        # self.negative_pos_encoder.n_patches = new_num_patches
 
-        anchor_pos_embedding, positive_pos_embedding, negative_pos_embedding = self._interpolate_pos_encoding(new_dim=self.in_dim)
-        self.anchor_pos_encoder.pos_embedding = nn.Parameter(anchor_pos_embedding)
-        self.positive_pos_encoder.pos_embedding = nn.Parameter(positive_pos_embedding)
-        self.negative_pos_encoder.pos_embedding = nn.Parameter(negative_pos_embedding)
+        # anchor_pos_embedding, positive_pos_embedding, negative_pos_embedding = self._interpolate_pos_encoding(new_dim=self.in_dim)
+        # self.anchor_pos_encoder.pos_embedding = nn.Parameter(anchor_pos_embedding)
+        # self.positive_pos_encoder.pos_embedding = nn.Parameter(positive_pos_embedding)
+        # self.negative_pos_encoder.pos_embedding = nn.Parameter(negative_pos_embedding)
+
+        self.pos_encoder.n_patches = new_num_patches
+        pos_embedding = self._interpolate_pos_encoding(new_dim=self.in_dim)
+        self.pos_encoder.pos_embedding = nn.ParameterList(pos_embedding)
 
         old_in_dim = self.in_dim
         self.in_dim = new_dim
