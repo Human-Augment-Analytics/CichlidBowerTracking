@@ -215,7 +215,7 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   ```
   ...
   train_settings:
-  batch_size: 16
+  batch_size: 1
   dataloader_workers: 0
   dataloader_pin_memory: false
   display_iters: 100
