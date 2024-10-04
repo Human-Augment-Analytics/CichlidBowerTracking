@@ -41,36 +41,19 @@ conda env create -f DEEPLABCUT.yaml
 
 ## Call `deeplabcut.create_multianimaltraining_dataset`
 
-- First, inspect the `config.yaml` file. Make sure to update the project path to point to your newly downloaded folder, and set the `engine` to `pytorch`. Review the rest of the YAML settings, which have also been set up for fish pose estimation (body parts, skeleton, etc.)
+
+- Inspect the `config.yaml` file. Make sure to update the project path to point to your newly downloaded project folder (`dlc_model-student-2023-07-26`), and set the `engine` to `pytorch`. Review the rest of the YAML settings, which have also been set up for fish pose estimation (body parts, skeleton, etc.)
 
   ```
   # Project path (change when moving around)
-  project_path: /storage/ice1/7/1/tnguyen868/dlc_dataset/dlc_test1/dlc_model-student-2023-07-26
+  project_path: /…/dlc_model-student-2023-07-26
 
 
   # Default DeepLabCut engine to use for shuffle creation (either pytorch or tensorflow)
   engine: pytorch
 
   ```
-- Run this code (be sure to set Python interpreter to the DLC environment from your installation in the previous step). Modify `config_path` to point to `config.yaml` that you have just downloaded.
-
-  ```
-  import deeplabcut
-
-  config_path = ".../dlc_model-student-2023-07-26/config.yaml"
-
-  deeplabcut.create_multianimaltraining_dataset(config_path)
-  ```
-- The folder structure looks like this. It seems that DLC re-created the `dlc-models-pytorch` folder, since its latest version supports a PyTorch engine.
-
-  ```.
-  ├── config.yaml
-  ├── dlc-models-pytorch
-  ├── labeled-data
-  ├── training-datasets
-  └── videos
-  ```
-- If this step runs into an error (or the next step), it might be because some of the folders in `labeled-data` are corrupted (according to Adam Thomas). In order to tell DLC to ignore these files, edit the `config.yaml` file and comment out these data files within the `video_sets` field:
+- *IMPORTANT*: Some of the folders in `labeled-data` are corrupted (according to Adam Thomas). In order to tell DLC to ignore these files, edit the `config.yaml` file and comment out these data files within the `video_sets` field:
 
 ```
 # Annotation data set configuration (and individual video cropping parameters)
@@ -152,6 +135,66 @@ video_sets:
   ? /home/hice1/tnguyen868/scratch/dlc_dataset/dlc_test1/dlc_model-student-2023-07-26/labeled-data/MC_singlenuc96_b1_Tk41_081120_0001_vid
   : crop: 0, 1296, 0, 972
 ```
+- *NOTE*: If there are already-created training datasets (which DLC calls shuffles) inside the project folder, these training shuffles might be marked as using Tensorflow engine or using PyTorch engine. In this guide, we want to ensure that DLC uses the PyTorch engine. So let’s erase the previously-created training shuffles and create a brand-new one.
+From the project folder, for example `dlc_model-student-2023-07-26`, erase the folders that say `dlc-models-pytorch` or `dlc-models` and the `training-datasets` folder, so that the tree looks like this (must keep `labeled-data` and `config.yaml` and `videos`)
+```
+(base) [… dlc_model-student-2023-07-26]$ tree -L 1
+.
+├── config.yaml
+├── labeled-data
+└── videos
+```
+Then let’s run this Python script (be sure that the Python interpreter is the correct environment, and that `config_path` points to the correct place on your machine):
+```
+config_path = "…/dlc_model-student-2023-07-26/config.yaml"
+deeplabcut.create_multianimaltraining_dataset(config_path)
+```
+Output should look successful like this:
+```
+Loading DLC 3.0.0rc5...
+DLC loaded in light mode; you cannot use any GUI (labeling, relabeling and standalone GUI)
+Utilizing the following graph: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7], [0, 8], [1, 2], [1, 3], [1, 4], [1, 5], [1, 6], [1, 7], [1, 8], [2, 3], [2, 4], [2, 5], [2, 6], [2, 7], [2, 8], [3, 4], [3, 5], [3, 6], [3, 7], [3, 8], [4, 5], [4, 6], [4, 7], [4, 8], [5, 6], [5, 7], [5, 8], [6, 7], [6, 8], [7, 8]]
+Creating training data for: Shuffle: 1 TrainFraction:  0.95
+100%|██████████████████████████████████████████████████████████████████████████████████████| 1472/1472 [00:39<00:00, 37.30it/s]
+The training dataset is successfully created. Use the function 'train_network' to start training. Happy training!
+```
+- Confirming the previous step: The project folder structure now looks like this. DLC created the `dlc-models-pytorch` folder and `training-datasets` folder, since its latest version supports a PyTorch engine.
+
+  ```.
+  ├── config.yaml
+  ├── dlc-models-pytorch
+  ├── labeled-data
+  ├── training-datasets
+  └── videos
+  ```
+Now if we inspect the `training-datasets` folder, we should have this tree, which shows the newly-created training shuffle.
+```
+(base) [… dlc_model-student-2023-07-26]$ cd training-datasets/
+(base) [… training-datasets]$ tree -L 3
+.
+└── iteration-0
+    └── UnaugmentedDataSet_dlc_modelJul26
+        ├── CollectedData_student.csv
+        ├── CollectedData_student.h5
+        ├── dlc_model_student95shuffle1.pickle
+        ├── Documentation_data-dlc_model_95shuffle1.pickle
+        └── metadata.yaml
+```
+Go into this `metadata.yaml` file to confirm that there’s only one shuffle, and it’s marked as using PyTorch engine:
+`… dlc_model-student-2023-07-26/training-datasets/iteration-0/UnaugmentedDataSet_dlc_modelJul26/metadata.yaml`
+```
+# This file is automatically generated - DO NOT EDIT
+# It contains the information about the shuffles created for the dataset
+---
+shuffles:
+  dlc_modelJul26-trainset95shuffle1:
+    train_fraction: 0.95
+    index: 1
+    split: 1
+    engine: pytorch
+```
+Then DLC would know to use PyTorch engine for this training shufffle.
+
 
 ## Call `deeplabcut.train_network`
 
