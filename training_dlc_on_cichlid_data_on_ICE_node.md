@@ -303,3 +303,24 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   sbatch dlc_training.sbatch
   ```
   Please refer to [PACE Documentation](https://gatech.service-now.com/home?id=kb_article_view&sysparm_article=KB0042503) for details on `.sbatch` syntax.
+
+  Specifically, you check the status of your job by running from a terminal shell: `squeue -u <username>`
+
+  You can peek at your output file while the batch job is running to see the console output so far, for example:
+  ```
+  tail -f DLC_Training_Test1_Report-698516.out
+  ```
+
+  The output so far might look like this:
+  ```
+  This is good for small batch sizes (e.g., when training on a CPU), where you should keep ``freeze_bn_stats=true``.
+  If you're using a GPU to train, you can obtain faster performance by setting a larger batch size (the biggest power of 2 where you don't geta CUDA out-of-memory error, such as 8, 16, 32 or 64 depending on the model, size of your images, and GPU memory) and ``freeze_bn_stats=false`` for the backbone of your model.
+  This also allows you to increase the learning rate (empirically you can scale the learning rate by sqrt(batch_size) times).
+  
+  Using 1472 images and 78 for testing
+  
+  Starting pose model training...
+  --------------------------------------------------
+  Number of iterations: 500, loss: 0.00740, lr: 0.0001
+  Number of iterations: 1000, loss: 0.00521, lr: 0.0001
+  ```
