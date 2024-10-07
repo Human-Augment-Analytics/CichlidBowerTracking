@@ -21,6 +21,7 @@ from data_distillation.optimization.schedulers.warmup_cosine_scheduler import Wa
 
 from data_distillation.misc.epoch_tracker import EpochTracker
 from data_distillation.misc.epoch_logger import EpochLogger
+from data_distillation.misc.intra_epoch_logger import IntraEpochLogger
 
 from data_distillation.testing.data.pairs import Pairs
 from data_distillation.testing.data.triplets import Triplets
@@ -103,6 +104,9 @@ class DataDistiller:
 
         self.acc_train_logger = EpochLogger(value_type='Training Accuracy')
         self.acc_valid_logger = EpochLogger(value_type='Valudation Accuracy')
+
+        self.train_intra_epoch_loggers = [IntraEpochLogger(value_type='Loss') for _ in range(nepochs)]
+        self.valid_intra_epoch_loggers = [IntraEpochLogger(value_type='Loss') for _ in range(nepochs)]
 
         self.nepochs = nepochs
         self.start_epoch = start_epoch
@@ -212,9 +216,10 @@ class DataDistiller:
 
                 # calculate loss using passed loss_fn
                 if isinstance(self.loss_fn, TripletClassificationLoss):
-                    loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
+                    loss, triplet_loss, ce_loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
                     acc = metric(y_pred, y).item()
 
+                    self.train_intra_epoch_loggers[epoch].add(loss, triplet_loss, ce_loss)
                     acc_tracker.add(acc)
                 elif isinstance(self.loss_fn, TripletLoss):
                     loss = self.loss_fn(z_anchor, z_positive, z_negative)
@@ -349,9 +354,10 @@ class DataDistiller:
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TripletClassificationLoss):
-                        loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
+                        loss, triplet_loss, ce_loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
                         acc = metric(y_pred, y).item()
 
+                        self.valid_intra_epoch_loggers[epoch].add(loss, triplet_loss, ce_loss)
                         acc_tracker.add(acc)
                     elif isinstance(self.loss_fn, TripletLoss):
                         loss = self.loss_fn(z_anchor, z_positive, z_negative)

@@ -1,5 +1,7 @@
+from typing import Tuple
+
 from data_distillation.losses.triplet_losses.triplet_loss import TripletLoss
-# from timm.loss import LabelSmoothingCrossEntropy
+from timm.loss import LabelSmoothingCrossEntropy
 
 import torch.nn as nn
 import torch
@@ -19,14 +21,14 @@ class TripletClassificationLoss(nn.Module):
         self.__version__ = '0.1.0'
 
         self.triplet_loss = TripletLoss(margin=margin, p_norm=p_norm)
-        # if not use_label_smoothing:
-        #     self.ce_loss = nn.CrossEntropyLoss()
-        # else:
-        #     self.ce_loss = LabelSmoothingCrossEntropy(smoothing=smoothing)
-        self.ce_loss = nn.CrossEntropyLoss()
+        if not use_label_smoothing:
+            self.ce_loss = nn.CrossEntropyLoss()
+        else:
+            self.ce_loss = LabelSmoothingCrossEntropy(smoothing=smoothing)
+        # self.ce_loss = nn.CrossEntropyLoss()
 
     def forward(self, z_anchor: torch.Tensor, z_positive: torch.Tensor, z_negative: torch.Tensor, \
-                y_prob: torch.Tensor, y_true: torch.Tensor) -> torch.Tensor:
+                y_prob: torch.Tensor, y_true: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         '''
         Computes the sum of the triplet loss (using the image embeddings) and the cross entropy loss (using the predicted anchor class).
 
@@ -39,6 +41,8 @@ class TripletClassificationLoss(nn.Module):
 
         Returns:
             total_loss: the sum of the triplet loss and cross entropy loss.
+            triplet_loss: the triplet subloss (part of the total loss).
+            ce_loss: the classification loss (part of the total loss).
         '''
         
         triplet_loss = self.triplet_loss(z_anchor, z_positive, z_negative)
@@ -46,4 +50,4 @@ class TripletClassificationLoss(nn.Module):
 
         total_loss = triplet_loss + ce_loss
 
-        return total_loss
+        return total_loss, triplet_loss, ce_loss
