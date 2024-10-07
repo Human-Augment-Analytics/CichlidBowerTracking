@@ -219,7 +219,7 @@ class DataDistiller:
                     loss, triplet_loss, ce_loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
                     acc = metric(y_pred, y).item()
 
-                    self.train_intra_epoch_loggers[epoch].add(loss, triplet_loss, ce_loss)
+                    self.train_intra_epoch_loggers[epoch].add(loss.item(), triplet_loss.item(), ce_loss.item())
                     acc_tracker.add(acc)
                 elif isinstance(self.loss_fn, TripletLoss):
                     loss = self.loss_fn(z_anchor, z_positive, z_negative)
@@ -357,7 +357,7 @@ class DataDistiller:
                         loss, triplet_loss, ce_loss = self.loss_fn(z_anchor, z_positive, z_negative, y_prob, y)
                         acc = metric(y_pred, y).item()
 
-                        self.valid_intra_epoch_loggers[epoch].add(loss, triplet_loss, ce_loss)
+                        self.valid_intra_epoch_loggers[epoch].add(loss.item(), triplet_loss.item(), ce_loss.item())
                         acc_tracker.add(acc)
                     elif isinstance(self.loss_fn, TripletLoss):
                         loss = self.loss_fn(z_anchor, z_positive, z_negative)

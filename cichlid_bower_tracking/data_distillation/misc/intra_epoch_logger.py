@@ -26,7 +26,7 @@ class IntraEpochLogger:
         '''
 
         assert len(values) == self.num_logs, f'Invalid Input: Expected {self.num_logs} inputs (got {len(values)})'
-        assert all(isinstance(value, float) for value in values), 'Inavlid Input: All input values must be of type "int" or "float".'
+        assert all(isinstance(value, float) for value in values), f'Inavlid Input: All input values must be of type "int" or "float" (got {(type(value) for value in values)})'
 
         for idx, value in enumerate(values):
             self.logs[idx].append(value)
