@@ -214,13 +214,20 @@ Then DLC would know to use PyTorch engine for this training shufffle.
 
   ```
   ...
-  train_settings:
-  batch_size: 1
+   - 70
+      - 90
+  snapshots:
+    max_snapshots: 15
+    save_epochs: 10
+    save_optimizer_state: false
+train_settings:
+  batch_size: 8
   dataloader_workers: 0
   dataloader_pin_memory: false
-  display_iters: 100
-  epochs: 180
+  display_iters: 500
+  epochs: 100
   seed: 42
+
   ```
 
   - The `eval_interval` setting under `Runner` controls how many epochs will the model attempts an evaluation after:
