@@ -1,4 +1,4 @@
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Union
 
 import pandas as pd
 import numpy as np
@@ -42,9 +42,16 @@ class TripletMiner:
         #   - negatives
         # ===================================================
 
-
-
         del tmp
         return hard_pos, hard_neg
     
-    def embed()
+    def embed(self, data: Dict[int, str]) -> None:
+        embeddings = None
+
+        # ===================================================
+        # TODO: Implement iterative enbedding
+        # ===================================================
+
+        self.embeddings = embeddings
+
+
