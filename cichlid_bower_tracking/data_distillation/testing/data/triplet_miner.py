@@ -32,6 +32,8 @@ class TripletMiner:
         elif pretr_model == 'seresnext101d_32x8d.ah_in1k':
             self.model = timm.create_model('seresnext101d_32x8d.ah_in1k', pretrained=True, features_only=True)
 
+        self.embeddings = None
+
     def _hard_mine(self, embeddings: Dict[int, np.ndarray], anchor: int) -> Tuple[np.ndarray, np.ndarray]:
         tmp = {identity: embedding for identity, embedding in embeddings.items() if identity != anchor}
 
@@ -49,7 +51,7 @@ class TripletMiner:
         embeddings = None
 
         # ===================================================
-        # TODO: Implement iterative enbedding
+        # TODO: Implement iterative embedding
         # ===================================================
 
         self.embeddings = embeddings
