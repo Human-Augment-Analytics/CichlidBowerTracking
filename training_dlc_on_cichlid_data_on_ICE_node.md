@@ -220,13 +220,13 @@ Then DLC would know to use PyTorch engine for this training shufffle.
     max_snapshots: 15
     save_epochs: 10
     save_optimizer_state: false
-train_settings:
-  batch_size: 8
-  dataloader_workers: 0
-  dataloader_pin_memory: false
-  display_iters: 500
-  epochs: 100
-  seed: 42
+  train_settings:
+    batch_size: 8
+    dataloader_workers: 0
+    dataloader_pin_memory: false
+    display_iters: 500
+    epochs: 100
+    seed: 42
 
   ```
 
