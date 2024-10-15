@@ -345,18 +345,21 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   deeplabcut.evaluate_network(config_path, plotting=True)
   ```
   From here on, it’s important to understand the files that DeepLabCut is creating for us to save the results of evaluation or visualization.
+  
   After this code, you’ll see `evaluation-results-pytorch` folder, where the evaluation results are stored in `.csv` and `.h5` files and visualization is created.
   ```
   .
   ├── config.yaml
   ├── dlc-models-pytorch
-  ├── evaluation-results-pytorch
+  **├── evaluation-results-pytorch**
   ├── labeled-data
   ├── training-datasets
   └── videos
   ```
   The visualization results here are the same training and testing image frames (provided in original dataset), but now they show both the ground-truth keypoints (body parts) and model-predicted keypoints. (Ground-truth keypoints are marked with “+”s, while model-predicted keypoints are round.)
+  
   The visualized images are saved in a folder that has a path similar to this: ` <project folder>/dlc_model-student-2023-07-26/evaluation-results-pytorch/iteration-0/dlc_modelJul26-trainset95shuffle1/LabeledImages_DLC_Resnet50_dlc_modelJul26shuffle1_snapshot_200`
+  
   The console output will show evaluation results, which might look like this. Basically, this means that on test images, the model-predicted keypoints are roughly 6 pixels away from ground-truth keypoints.
   ```
   Evaluation results for DLC_Resnet50_dlc_modelJul26shuffle1_snapshot_100-results.csv (pcutoff: 0.01):
@@ -370,22 +373,26 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   test rmse_pcutoff                 5.89
   test mAP                         70.26
   test mAR                         76.16
-  test rmse_detections              6.66
-  test rmse_detections_pcutoff      6.66
-```
-
-  **(As of October 15, 2024)** If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
+  **test rmse_detections              6.66**
+  **test rmse_detections_pcutoff      6.66**
+  ```
+  
+  (As of October 15, 2024) If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
 
 ## Inference on new videos – `analyze_videos()`
   Once your model achieved solid accuracies after training, you can proceed to analyze new videos. You should test this with a short video first (maybe 30 seconds long).
+  
   To analyze a new video, modify the path to your video and execute this code. Note that the `<video folder>` does not need to be the same as your project folder.
   ```
   config_path = "<project folder>/dlc_model-student-2023-07-26/config.yaml"
   scorername = deeplabcut.analyze_videos(config_path,['<video folder>/0001_vid_30secs.mp4'], videotype='.mp4')
   ```
   **(As of October 15)** If there are errors, please refer to some issues I raised on DeepLabCut GitHub: 
-  •	Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
-  •	Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
+  
+    * Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
+    
+    * Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
+  
   This note will be updated as the DeepLabCut team investigates and fixes these bugs.
   
   This code will create some files, such as:
@@ -397,8 +404,11 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   <video folder>/0001_vid_30secsDLC_Resnet50_dlc_modelJul26shuffle1_snapshot_200_el.pickle
   ```
   The file names are a concatenation of your video name, the model name, the shuffle index and the snapshot index. These files contain the model’s predictions. Inspecting the `.h5` or `.pickle` files, you will see the predictions for each frame. For each frame, the model makes prediction for each animal (up to a maximum number of animals) in that frame. For each animal, the model might predict some body-part (keypoints) of that animal on the image frame. For each keypoint, the model might predict x-coordinate, y-coordinate, and confidence. 
+  
   The `_assemblies.pickle` file might contain an additional column for the `affinity` value for the assembled skeleton (“skeleton” meaning the model has grouped a set of keypoints and decided they are likely to belong to the same animal) – the `afinity` value seems to indicate how strongly the model believes in the assembled set of keypoints as a skeleton.
+  
   The `_meta.pickle` holds some metadata of the video inference.
+
 ## Create videos with body-parts visualized
   Run this code after `.analyze_videos()`:
   ```
@@ -408,7 +418,9 @@ Then DLC would know to use PyTorch engine for this training shufffle.
 
 ## Run `.stitch_tracklets()`
   Run this to associate the tracklets (small tracks identified by the model) into longer tracks that might better help us track the same fish individuals. 
+  
   My initial interpretation, based on my inspection of DeepLabCut code, is that the previous `.analyze_videos()` function call uses SORT algorithm to process consecutive frames, make predictions on how a “skeleton” might move next, and associate those predictions with the actual “skeleton” detected in the next frames. This way, the model identified small tracks that belong to the same individual fish.
+  
   But it appears that if the individual fish cross paths or occlude one another, those small tracks might be disrupted and are no longer associated with the right individuals. By running a max-flow algorithm, DeepLabCut is able to stitch the disrupted tracks into longer tracks, helping us better track individual fish.
   ```
   config_path = "/home/hice1/tnguyen868/scratch/dlc_dataset/dlc_test1/dlc_model-student-2023-07-26/config.yaml"
@@ -434,3 +446,4 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   )
   
   ```
+  
