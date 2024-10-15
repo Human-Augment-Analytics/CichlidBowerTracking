@@ -1,8 +1,8 @@
 # Training DeepLabCut on ICE compute node
 
-This guide will walk you through the specific steps and pitfalls when training a `DeepLabCut` model on HAAG's Cichlid data that are annotated with keypoints (body parts) on an ICE compute node.
+This guide will walk you through the specific steps and pitfalls when training and evaluating a `DeepLabCut` model on HAAG's Cichlid data that are annotated with keypoints (body parts) on an ICE compute node.
 
-These steps follow [the general instructions from DLC](https://deeplabcut.github.io/DeepLabCut/docs/maDLC_UserGuide.html) for multi-animal pose estimation and tracking. The entire DLC pipeline includes data creation, GUI, training, evaluation and inference (animal tracking). These steps pertain to training only, with the annotation data already created, and are meant to quickly get to the training steps with most default settings kept unchanged.
+These steps follow [the general instructions from DLC](https://deeplabcut.github.io/DeepLabCut/docs/maDLC_UserGuide.html) for multi-animal pose estimation and tracking. The entire DLC pipeline includes data creation, GUI, training, evaluation and inference (animal tracking). These steps assume that annotation data have already been created, and are meant to quickly guide you through training and evaluation. Thus, most settings are kept as default.
 
 Please see these references for other aspects of DeepLabCut:
 
