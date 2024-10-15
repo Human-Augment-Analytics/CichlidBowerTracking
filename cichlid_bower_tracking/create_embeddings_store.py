@@ -14,7 +14,22 @@ test_df = df[df['split'] == 'test']
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.1
-train_df, valid_df = train_test_split(train_df, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+
+identities = train_df['identity'].unique()
+train_subsets, valid_subsets = [], []
+for identity in identities:
+    subset = train_df[train_df['identity'] == identity].to_numpy()
+    train_subset, valid_subset = train_test_split(subset, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+    
+    train_subsets.append(train_subset)
+    valid_subsets.append(valid_subset)
+
+train_df = pd.DataFrame(np.row_stack(train_subsets), columns=train_df.columns)
+valid_df = pd.DataFrame(np.row_stack(valid_subsets), columns=train_df.columns)
+
+print(f'Training Set %: {train_df.shape[0] / df.shape[0]}')
+print(f'Validation Set %: {valid_df.shape[0] / df.shape[0]}')
+print(f'Testing Set %: {test_df.shape[0] / df.shape[0]}')
 
 train_df.to_csv(BASE + 'train_metadata.csv')
 valid_df.to_csv(BASE + 'valid_metadata.csv')
