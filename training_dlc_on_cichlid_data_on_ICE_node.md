@@ -331,3 +331,47 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   Number of iterations: 500, loss: 0.00740, lr: 0.0001
   Number of iterations: 1000, loss: 0.00521, lr: 0.0001
   ```
+
+## Continue training (optional)
+  If your compute node reaches time limit and you have to stop training, you can continue training with this Python code (please locate your desired snapshot to continue training from, and change the path accordingly):
+  ```
+  deeplabcut.train_network(config_path, shuffle=1, trainingsetindex=0, snapshot_path="<project folder> /dlc_model-student-2023-07-26/dlc-models-pytorch/iteration-0/dlc_modelJul26-trainset95shuffle1/train/snapshot-100.pt")
+  ```
+
+## Evaluating the network
+  Once the network is trained, you can evaluate with this Python code (modify your path to `config.yaml` accordingly):
+  ```
+  config_path = "<project folder> /dlc_model-student-2023-07-26/config.yaml"
+  deeplabcut.evaluate_network(config_path, plotting=True)
+  ```
+  From here on, it’s important to understand the files that DeepLabCut is creating for us to save the results of evaluation or visualization.
+  After this code, you’ll see `evaluation-results-pytorch` folder, where the evaluation results are stored in `.csv` and `.h5` files and visualization is created.
+  ```
+  .
+  ├── config.yaml
+  ├── dlc-models-pytorch
+  **├── evaluation-results-pytorch**
+  ├── labeled-data
+  ├── training-datasets
+  └── videos
+  ```
+  The visualization results here are the same training and testing image frames (provided in original dataset), but now they show both the ground-truth keypoints (body parts) and model-predicted keypoints. (Ground-truth keypoints are marked with “+”s, while model-predicted keypoints are round.)
+  The visualized images are saved in a folder that has a path similar to this: ` <project folder>/dlc_model-student-2023-07-26/evaluation-results-pytorch/iteration-0/dlc_modelJul26-trainset95shuffle1/LabeledImages_DLC_Resnet50_dlc_modelJul26shuffle1_snapshot_200`
+  The console output will show evaluation results, which might look like this. Basically, this means that on test images, the model-predicted keypoints are roughly 6 pixels away from ground-truth keypoints.
+  ```
+  Evaluation results for DLC_Resnet50_dlc_modelJul26shuffle1_snapshot_100-results.csv (pcutoff: 0.01):
+  train rmse                        3.97
+  train rmse_pcutoff                3.97
+  train mAP                        86.50
+  train mAR                        89.37
+  train rmse_detections             3.85
+  train rmse_detections_pcutoff     3.85
+  test rmse                         5.89
+  test rmse_pcutoff                 5.89
+  test mAP                         70.26
+  test mAR                         76.16
+  **test rmse_detections              6.66**
+**test rmse_detections_pcutoff      6.66**
+```
+
+(As of October 15, 2024) If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
