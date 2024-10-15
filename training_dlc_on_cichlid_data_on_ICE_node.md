@@ -377,7 +377,7 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   test rmse_detections_pcutoff      6.66
   ```
   
-  (As of October 15, 2024) If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
+  **(As of October 15, 2024)** If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
 
 ## Inference on new videos – `analyze_videos()`
   Once your model achieved solid accuracies after training, you can proceed to analyze new videos. You should test this with a short video first (maybe 30 seconds long).
@@ -389,9 +389,9 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   ```
   **(As of October 15)** If there are errors, please refer to some issues I raised on DeepLabCut GitHub: 
   
-    * Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
+    - Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
     
-    * Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
+    - Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
   
   This note will be updated as the DeepLabCut team investigates and fixes these bugs.
   
