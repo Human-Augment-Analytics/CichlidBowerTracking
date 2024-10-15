@@ -31,9 +31,11 @@ for identity in identities:
 train_df = pd.DataFrame(np.row_stack(train_subsets), columns=train_df.columns)
 valid_df = pd.DataFrame(np.row_stack(valid_subsets), columns=train_df.columns)
 
-print(f'Training Set %: {train_df.shape[0] / (test_df.shape[0] + train_df.shape[0] + valid_df.shape[0])}')
+print(f'\nTraining Set %: {train_df.shape[0] / (test_df.shape[0] + train_df.shape[0] + valid_df.shape[0])}')
 print(f'Validation Set %: {valid_df.shape[0] / (test_df.shape[0] + train_df.shape[0] + valid_df.shape[0])}')
 print(f'Testing Set %: {test_df.shape[0] / (test_df.shape[0] + train_df.shape[0] + valid_df.shape[0])}')
+
+print(f'\n% of original dataset: {(test_df.shape[0] + train_df.shape[0] + valid_df.shape[0]) / df.shape[0]}\n')
 
 train_df.to_csv(BASE + 'train_metadata.csv')
 valid_df.to_csv(BASE + 'valid_metadata.csv')
