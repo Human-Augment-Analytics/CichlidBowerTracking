@@ -374,4 +374,4 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   test rmse_detections_pcutoff      6.66
 ```
 
-**(As of October 15, 2024)** If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
+  **(As of October 15, 2024)** If you don’t get these accurate evaluation results (around 6 pixels), then model might not have been trained properly. As of October 15, 2024, DeepLabCut version rc4 seems to have an bug that you have to fix – please refer to my GitHub issue raised with DeepLabCut repo: https://github.com/DeepLabCut/DeepLabCut/issues/2751 DeepLabCut version rc5 (latest version) seems to introduce a fix for this. As the DLC team fixes the code, this note will be updated.
