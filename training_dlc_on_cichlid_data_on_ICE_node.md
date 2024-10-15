@@ -388,10 +388,8 @@ Then DLC would know to use PyTorch engine for this training shufffle.
   scorername = deeplabcut.analyze_videos(config_path,['<video folder>/0001_vid_30secs.mp4'], videotype='.mp4')
   ```
   **(As of October 15)** If there are errors, please refer to some issues I raised on DeepLabCut GitHub: 
-  
-    - Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
-    
-    - Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
+  - Analyze_videos failed for empty frame. https://github.com/DeepLabCut/DeepLabCut/issues/2754
+  - Np shape errors led to failure to create annotated videos. https://github.com/DeepLabCut/DeepLabCut/issues/2755
   
   This note will be updated as the DeepLabCut team investigates and fixes these bugs.
   
