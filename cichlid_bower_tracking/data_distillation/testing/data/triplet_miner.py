@@ -61,8 +61,8 @@ class TripletMiner:
         assert len(ids) == len(paths) == len(embeds) == len(batch), f'Invalid Input(s): ids, paths, embeds, and batch must all be same length!'
         
         if use_pretr:
-            embeds = self.model(batch)[-1].item().reshape(len(ids), -1).to_list()
-        
+            embeds = self.model(batch)[-1]
+            
         while len(ids) > 0:
             identity = ids.pop()
 
