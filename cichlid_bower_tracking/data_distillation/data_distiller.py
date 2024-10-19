@@ -1,5 +1,5 @@
-from typing import Tuple, Union
-import copy, tqdm, os
+from typing import Tuple, Union, List
+import copy, tqdm, os, json
 
 from data_distillation.models.convolutional.siamese_autoencoder import SiameseAutoencoder
 from data_distillation.models.convolutional.triplet_autoencoder import TripletAutoencoder
@@ -32,10 +32,15 @@ from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 
+from torchvision.io import read_image
 import torch.distributed as dist
 import torch.optim as optim
 import torch.nn as nn
 import torch
+import timm
+
+import numpy as np
+import pandas as pd
 
 def ddp_setup(rank, world_size):
     '''
@@ -54,9 +59,9 @@ def ddp_setup(rank, world_size):
     init_process_group(backend='nccl', rank=rank, world_size=world_size)
 
 class DataDistiller:
-    def __init__(self, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
+    def __init__(self, df: pd.DataFrame, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
-                 nclasses: int, checkpoints_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
+                 nclasses: int, ntriplets: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -74,8 +79,9 @@ class DataDistiller:
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
-        self.__version__ = '0.5.1'
+        self.__version__ = '0.6.0'
 
+        self.df = df
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
 
@@ -112,8 +118,63 @@ class DataDistiller:
         self.start_epoch = start_epoch
         self.nclasses = nclasses
 
+        self.ntriplets = ntriplets
+        self.thetas = thetas
+        self.pretr_model = pretr_model
+
         self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
+        self.embeddings_dir = embeddings_dir.rstrip('/ ')
+
         self.disable_progress_bar = disable_progress_bar
+
+        self.__init_mining(num_triplets=self.ntriplets, thetas=self.thetas, pretr_model=self.pretr_model)
+
+    def __init_mining(self, num_triplets: int, thetas: List[float], pretr_model: str):
+        _valid_pretr_models = {
+            'resnet152', 'vit_large_patch16_224_in21k', 'vit_large_patch14_224_clip_laion2b', 
+            'tf_efficientnet_b5.ns_jft_in1k', 'tf_efficientnet_b6.ns_jft_in1k',
+            'deit_base_distilled_patch16_224.fb_in1k', 'seresnext101d_32x8d.ah_in1k'
+        }
+
+        if pretr_model is not None:
+            assert pretr_model in _valid_pretr_models, f'Invalid Pre-trained Model: must pick from {_valid_pretr_models} (got {pretr_model})'
+
+        self.num_triplets = num_triplets
+        self.thetas = thetas
+        self.pretr_model = pretr_model
+
+        if pretr_model == 'resnet152':
+            self.pretr_model = timm.create_model(model_name='resnet152', pretrained=True, features_only=True)
+        elif pretr_model == 'vit_large_patch16_224_in21k':
+            self.pretr_model = timm.create_model(model_name='vit_large_patch16_224_in21k', pretrained=True, features_only=True)
+        elif pretr_model == 'vit_large_patch14_224_clip_laion2b':
+            self.pretr_model = timm.create_model(model_name='vit_large_patch14_224_clip_laion2b', pretrained=True, features_only=True)
+        elif pretr_model == 'tf_efficientnet_b5.ns_jft_in1k':
+            self.pretr_model = timm.create_model('tf_efficientnet_b5.ns_jft_in1k', pretrained=True, features_only=True)
+        elif pretr_model == 'tf_efficientnet_b6.ns_jft_in1k':
+            self.pretr_model = timm.create_model('tf_efficientnet_b6.ns_jft_in1k', pretrained=True, features_only=True)
+        elif pretr_model == 'deit_base_distilled_patch16_224.fb_in1k':
+            self.pretr_model = timm.create_model('deit_base_distilled_patch16_224.fb_in1k', pretrained=True, features_only=True)
+        elif pretr_model == 'seresnext101d_32x8d.ah_in1k':
+            self.pretr_model = timm.create_model('seresnext101d_32x8d.ah_in1k', pretrained=True, features_only=True)
+        else:
+            raise ValueError('Invalid Input for pretr_model argument.')
+        
+        if self.start_epoch == 0:
+            self._initial_embed()
+        
+    def _initial_embed(self) -> None:
+        self.embeddings = dict()
+
+        unique_ids = self.df['identity'].unique()
+        for unique_id in unique_ids:
+            subset = self.df[self.df['identity'] == unique_id]
+
+            for path in subset['path'].to_list():
+                img = read_image(path).float()
+                embed = self.pretr_model(img)[-1]
+
+                self.embeddings[unique_id][path] = embed.item().flatten().to_list()
 
     def _train(self, epoch: int) -> Tuple[float]:
         '''
@@ -407,7 +468,30 @@ class DataDistiller:
         checkpoint_path = self.checkpoints_dir + f'/checkpoint_epoch{epoch}.pth'
         torch.save(checkpoint, checkpoint_path)
 
-        print(f'Epoch {epoch} Checkpoint Saved!')
+        if self.gpu_id == 0:
+            print(f'Epoch {epoch} Checkpoint Saved!')
+
+    def _save_embeddings(self, epoch: int, metric: float) -> None:
+        '''
+        Saves the current epoch's embeddings and performance metric value in a JSON file.
+
+        Input:
+            epoch: the current epoch number.
+            metric: the current epoch's final average metric value.
+        '''
+
+        embeddings_file = {
+            'store': self.embeddings,
+            'epoch': epoch,
+            'metric': metric
+        }
+
+        embeddings_path = self.embeddings_dir + f'/embeddings_epoch{epoch}.json'
+        with open(embeddings_path, 'w') as file:
+            json.dump(embeddings_file, file)
+
+        if self.gpu_id == 0:
+            print(f'Epoch {epoch} Embeddings Saved!')
 
     def _load_checkpoint(self, epoch: int) -> None:
         '''
@@ -436,6 +520,28 @@ class DataDistiller:
 
             if self.gpu_id == 0:
                 print('Previous Epoch\'s Checkpoint Loaded!')
+
+    def _load_embeddings(self, epoch: int) -> float:
+        '''
+        Loads the previous epoch's embeddings and model performance from the JSON file they were stored in.
+        '''
+
+        metric = 0.0
+        if epoch > 0:
+            embeddings_path = self.embeddings_dir + f'/embeddings_epoch{epoch - 1}.json'
+        
+            with open(embeddings_path, 'r') as file:
+                tmp = json.load(file)['store']
+                
+                self.embeddings = tmp['store']
+                metric = tmp['metric']
+
+                del tmp
+
+            if self.gpu_id == 0:
+                print('Previous Epoch\'s Embeddings Loaded!')
+
+        return metric
     
     # def _save_model_weights(self, best_model: nn.Module) -> bool:
     #     '''

@@ -39,12 +39,18 @@ class Triplets(Dataset):
             index: an integer index to be used in obtaining an image pair and associated similarity label.
 
         Returns:
+            anchor_id: the identity of the anchor image in the triplet at the passed index.
+            positive_id: the identity of the positive image (similar to anchor) in the triplet at the passed index.
+            negative_id: the identity of the negative image (dissimilar to anchor) in the triplet at the passed index.
+            anchor_path: the filepath of the anchor image in the triplet at the passed index.
+            positive_path: the filepath of the positive image (similar to anchor) in the triplet at the passed index.
+            negative_path: the filepath of the negative image (dissimilar to anchor) in the triplet at the passed index.
             anchor: the anchor image in the triplet at the passed index.
             positive: the positive image (similar to anchor) in the triplet at the passed index.
             negative: the negative image (dissimilar to anchor) in the triplet at the passed index.
         '''
 
-        anchor_path, positive_path, negative_path, y_true = self.df.iloc[index]
+        anchor_id, positive_id, negative_id = anchor_path, positive_path, negative_path = self.df.iloc[index]
         anchor, positive, negative = read_image(anchor_path).float(), read_image(positive_path).float(), read_image(negative_path).float()
 
         if self.transform:
@@ -56,4 +62,4 @@ class Triplets(Dataset):
         assert positive.shape[0] == 3, f'Positive @ {positive_path} is not RGB!'
         assert negative.shape[0] == 3, f'Negative @ {negative_path} is not RGB!'
 
-        return (anchor, positive, negative, y_true)
+        return (anchor_id, positive_id, negative_id, anchor_path, positive_path, negative_path, anchor, positive, negative)
