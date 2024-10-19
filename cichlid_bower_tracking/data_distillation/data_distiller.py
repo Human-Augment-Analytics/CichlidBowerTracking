@@ -164,6 +164,12 @@ class DataDistiller:
             self._initial_embed()
         
     def _initial_embed(self) -> None:
+        '''
+        Generates the initial embeddings store for triplet mining using self.df.
+
+        Inputs: None
+        '''
+
         self.embeddings = dict()
 
         unique_ids = self.df['identity'].unique()
@@ -175,6 +181,53 @@ class DataDistiller:
                 embed = self.pretr_model(img)[-1]
 
                 self.embeddings[unique_id][path] = embed.item().flatten().to_list()
+
+    def _omegas(self, p: float, p_max: float) -> Tuple[float]:
+        '''
+        Determines the triplet mining strategy's percentages (omega_1, omega_2, omega_3) based on performance thresholds (theta_1, theta_2) and the maximum possible performance.
+
+        Inputs:
+            p: the performance metric value.
+            p_max: the maximum possible value of the performance metric.
+
+        Returns:
+            omega_1: the percentage of triplets to be selected using the random mining substrategy.
+            omega_2: the percentage of triplets to be selected using the semi-hard negative mining substrategy.
+            omega_3: the percentage of triplets to be selected using the hard negative mining strategy.
+        '''
+
+        omega_1 = 0.0
+        omega_2 = 0.0
+        omega_3 = 0.0
+
+        theta_1, theta_2 = self.thetas
+
+        if p < theta_1:
+            omega_1 = 0.5
+            omega_2 = 0.5
+        elif theta_1 <= p < theta_2:
+            p_scale = (p - theta_1) / (theta_2 - theta_1)
+
+            omega_1 = 0.5 - 0.25 * p_scale
+            omega_2 = 0.5 + 0.25 * p_scale
+        else:
+            p_scale = (p - theta_2) / (p_max - theta_2)
+
+            omega_1 = 0.25 - 0.25 * p_scale
+            omega_2 = 0.75 - 0.25 * p_scale
+            omega_3 = 0.5 * p_scale
+
+        return omega_1, omega_2, omega_3 
+
+    def _mine(self) -> None:
+        '''
+        TODO: Performs triplet mining using self.embeddings.
+
+        Inputs: None
+        '''
+
+        pass
+
 
     def _train(self, epoch: int) -> Tuple[float]:
         '''
