@@ -1,4 +1,4 @@
-from typing import Tuple, Union, List
+from typing import Tuple, Union, List, Dict
 import copy, tqdm, os, json
 
 from data_distillation.models.convolutional.siamese_autoencoder import SiameseAutoencoder
@@ -39,8 +39,10 @@ import torch.nn as nn
 import torch
 import timm
 
+from scipy.spatial.distance import euclidean
 import numpy as np
 import pandas as pd
+import random
 
 def ddp_setup(rank, world_size):
     '''
@@ -219,14 +221,167 @@ class DataDistiller:
 
         return omega_1, omega_2, omega_3 
 
-    def _mine(self) -> None:
+    def _mine(self, p: float, p_max: float) -> DataLoader:
         '''
         TODO: Performs triplet mining using self.embeddings.
 
-        Inputs: None
+        Inputs:
+            p: the model's current performance metric value
+            p_max: the maximum performance metric value
+
+        Returns:
+
         '''
+        
+        dataloader = None
+
+        # calculate number of triplets for each mining substrategy
+        pct_rand, pct_semihard, pct_hard = self._omegas(p, p_max)
+        
+        num_rand = int(pct_rand * self.num_triplets)
+        num_semihard = int(pct_semihard * self.num_triplets)
+        num_hard = int(pct_hard * self.num_triplets)
 
         pass
+
+    def _random_mine(self, num_triplets: int) -> List[Dict]:
+        rands = []
+
+        for _ in range(num_triplets):
+            # select anchor
+            anchor_id = random.choice(list(self.embeddings.keys()))
+            anchor_path = random.choice(list(self.embeddings[anchor_id].keys()))
+
+            # select positive
+            positive_id = anchor_id
+            positive_path = anchor_path
+            while positive_path == anchor_path:
+                positive_path = random.choice(list(self.embeddings[positive_id].keys()))
+
+            # select negative
+            negative_id = anchor_id
+            while negative_id == anchor_id:
+                negative_id = random.choice(list(self.embeddings.keys()))
+
+            negative_path = random.choice(list(self.embeddings[negative_id].keys()))
+
+            # create and append row
+            row = {
+                'anchor_id': anchor_id,
+                'positive_id': positive_id,
+                'negative_id': negative_id,
+                'anchor_path': anchor_path,
+                'positive_path': positive_path,
+                'negative_path': negative_path
+            }
+
+            rands.append(row)
+
+        print(f'{len(rands)} Randomly-Mined Triplets Selected!')
+
+        return rands
+    
+    def _semihard_mine(self, num_triplets: int, margin: float, max_attempts=100) -> List[Dict]:
+        semihards = []
+        attempt = 0
+
+        while len(semihards) < num_triplets and attempt < num_triplets * max_attempts:
+            # select anchor
+            anchor_id = random.choice(list(self.embeddings.keys()))
+            anchor_path = random.choice(list(self.embeddings[anchor_id].keys()))
+            anchor_embed = self.embeddings[anchor_id][anchor_path]
+
+            # select positive
+            positive_id = anchor_id
+            positive_path = anchor_path
+            while positive_path == anchor_path:
+                positive_path = random.choice(list(self.embeddings[positive_id].keys()))
+
+            positive_embed = self.embeddings[positive_id][positive_path]
+
+            # select semi-hard negative
+            found_semihard = False
+            for _ in range(max_attempts):
+                negative_id = anchor_id
+                while negative_id == anchor_id:
+                    negative_id = random.choice(list(self.embeddings.keys()))
+                
+                negative_path = random.choice(list(self.embeddings[negative_id].keys()))
+                negative_embed = self.embeddings[negative_id][negative_path]
+
+                if euclidean(anchor_embed, positive_embed) < euclidean(anchor_embed, negative_embed) < euclidean(anchor_embed, positive_embed) + margin:
+                    found_semihard = True
+                    break
+
+            if found_semihard:
+                row = {
+                    'anchor_id': anchor_id,
+                    'positive_id': positive_id,
+                    'negative_id': negative_id,
+                    'anchor_path': anchor_path,
+                    'positive_path': positive_path,
+                    'negative_path': negative_path
+                }
+
+                semihards.append(row)
+
+            attempt += 1
+
+        return semihards
+    
+    def _hard_mine(self, num_triplets: int, max_attempts=100) -> List[Dict]:
+        hards = []
+        attempt = 0
+
+        while len(hards) < num_triplets and attempt < num_triplets * max_attempts:
+            # select anchor
+            anchor_id = random.choice(list(self.embeddings.keys()))
+            anchor_path = random.choice(list(self.embeddings[anchor_id].keys()))
+            anchor_embed = self.embeddings[anchor_id][anchor_path]
+
+            # select positive
+            positive_id = anchor_id
+            positive_path = anchor_path
+            while positive_path == anchor_path:
+                positive_path = random.choice(list(self.embeddings[positive_id].keys()))
+
+            positive_embed = self.embeddings[positive_id][positive_path]
+
+            # select hard negative
+            found_hard = False
+            for _ in range(max_attempts):
+                negative_id = anchor_id
+                while negative_id == anchor_id:
+                    negative_id = random.choice(list(self.embeddings.keys()))
+                
+                negative_path = random.choice(list(self.embeddings[negative_id].keys()))
+                negative_embed = self.embeddings[negative_id][negative_path]
+
+                if euclidean(anchor_embed, negative_embed) < euclidean(anchor_embed, positive_embed):
+                    found_hard = True
+                    break
+
+            if found_hard:
+                row = {
+                    'anchor_id': anchor_id,
+                    'positive_id': positive_id,
+                    'negative_id': negative_id,
+                    'anchor_path': anchor_path,
+                    'positive_path': positive_path,
+                    'negative_path': negative_path
+                }
+
+                hards.append(row)
+
+            attempt += 1
+
+        return hards
+            
+
+
+                
+
+
 
 
     def _train(self, epoch: int) -> Tuple[float]:
