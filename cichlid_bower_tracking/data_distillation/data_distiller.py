@@ -63,7 +63,7 @@ def ddp_setup(rank, world_size):
 class DataDistiller:
     def __init__(self, df: pd.DataFrame, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
-                 nclasses: int, ntriplets: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
+                 batch_size: int, nclasses: int, ntriplets: int, nworkers: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, triplets_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -120,12 +120,16 @@ class DataDistiller:
         self.start_epoch = start_epoch
         self.nclasses = nclasses
 
+        self.batch_size = batch_size
+        self.nworkers = nworkers
+
         self.ntriplets = ntriplets
         self.thetas = thetas
         self.pretr_model = pretr_model
 
         self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
         self.embeddings_dir = embeddings_dir.rstrip('/ ')
+        self.triplets_dir = triplets_dir.rstrip('/ ')
 
         self.disable_progress_bar = disable_progress_bar
 
@@ -221,13 +225,17 @@ class DataDistiller:
 
         return omega_1, omega_2, omega_3 
 
-    def _mine(self, p: float, p_max: float) -> DataLoader:
+    def _mine(self, p: float, p_max: float, margin: float, epoch: int, max_attempts=100, transform=None) -> DataLoader:
         '''
         TODO: Performs triplet mining using self.embeddings.
 
         Inputs:
-            p: the model's current performance metric value
-            p_max: the maximum performance metric value
+            p: the model's current performance metric value.
+            p_max: the maximum performance metric value.
+            margin: the triplet margin used in the stored loss function, used in semi-hard mining.
+            epoch: the current epoch number.
+            max_attempts: the maximum number of attempts for finding semi-hard and hard negatives, used in semi-hard and hard mining.
+            transform: the augmentation transformations applied to each image.
 
         Returns:
 
@@ -242,7 +250,19 @@ class DataDistiller:
         num_semihard = int(pct_semihard * self.num_triplets)
         num_hard = int(pct_hard * self.num_triplets)
 
-        pass
+        rands = self._random_mine(num_rand)
+        semihards = self._semihard_mine(num_semihard, margin=margin, max_attempts=max_attempts)
+        hards = self._hard_mine(num_hard, max_attempts=max_attempts)
+
+        triplets = rands + semihards + hards
+        df = pd.DataFrame(triplets)
+
+        self._save_triplets(df, epoch=epoch)
+
+        dataset = Triplets(df, transform=transform)
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, num_workers=self.nworkers)
+
+        return dataloader
 
     def _random_mine(self, num_triplets: int) -> List[Dict]:
         rands = []
@@ -376,13 +396,6 @@ class DataDistiller:
             attempt += 1
 
         return hards
-            
-
-
-                
-
-
-
 
     def _train(self, epoch: int) -> Tuple[float]:
         '''
@@ -419,13 +432,13 @@ class DataDistiller:
                 elif self.ddp and (isinstance(self.model.module, SiameseAutoencoder) or isinstance(self.model.module, SiameseViTAutoencoder)):
                     z1, z2, x1_reconstruction, x2_reconstruction = self.model(x1, x2)
                 else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
+                    raise Exception('Invalid model type: must be SiameseAutoencoder or SiameseViTAutoencoder.')
 
                 # calculate loss using passed loss_fn
                 if isinstance(self.loss_fn, TotalSiameseLoss):
                     loss = self.loss_fn(y, x1, x2, z1, z2, x1_reconstruction, x2_reconstruction)
                 else: # if/when necessary, add more loss functions in elif-statements
-                    raise Exception(f'Invalid loss type: must be TotalSiameseLoss.')
+                    raise Exception('Invalid loss type: must be TotalSiameseLoss.')
 
                 # backward pass
                 loss.backward()
@@ -481,7 +494,7 @@ class DataDistiller:
                 elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                     z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                 else: # if/when necessary, add more model types in elif-statements
-                    raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
+                    raise Exception('Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
 
                 # calculate loss using passed loss_fn
                 if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -500,7 +513,7 @@ class DataDistiller:
                 elif isinstance(self.loss_fn, TotalTripletLoss):
                     loss = self.loss_fn(anchor, positive, negative, z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction)
                 else: # if/when necessary, add more loss functions in elif-statements
-                    raise Exception(f'Invalid loss type: must be TotalTripletLoss, TripletClassificationLoss, TripletLoss, or CrossEntropyLoss.')
+                    raise Exception('Invalid loss type: must be TotalTripletLoss, TripletClassificationLoss, TripletLoss, or CrossEntropyLoss.')
 
                 # backward pass
                 loss.backward()
@@ -619,7 +632,7 @@ class DataDistiller:
                     elif self.ddp and (isinstance(self.model.module, TripletAutoencoder) or isinstance(self.model.module, TripletViTAutoencoder)):
                         z_anchor, z_positive, z_negative, anchor_reconstruction, positive_reconstruction, negative_reconstruction = self.model(anchor, positive, negative)
                     else: # if/when necessary, add more model types in elif-statements
-                        raise Exception(f'Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
+                        raise Exception('Invalid model type: must be TCAiT, TCAiTExtractor, PyraTCAiT, PVT, TripletAutoencoder, or TripletViTAutoencoder.')
                     
                     # calculate loss using passed loss_fn
                     if isinstance(self.loss_fn, TripletClassificationLoss):
@@ -701,6 +714,22 @@ class DataDistiller:
         if self.gpu_id == 0:
             print(f'Epoch {epoch} Embeddings Saved!')
 
+    def _save_triplets(self, df: pd.DataFrame, epoch: int) -> None:
+        '''
+        Saves the current epoch's triplet dataset in a CSV file.
+
+        Input:
+            df: the current epoch's triplet dataset in a pandas DataFrame.
+            epoch: the current epoch number.
+        '''
+
+        triplets_path = f'/triplets_epoch{epoch}.csv'
+
+        df.to_csv(triplets_path)
+
+        if self.gpu_id == 0:
+            print(f'Epoch {epoch} Triplets Saved!')
+
     def _load_checkpoint(self, epoch: int) -> None:
         '''
         Loads the previous epoch's model and optimizer state dictionaries from its checkpoint file into the current model and optimizer.
@@ -732,6 +761,12 @@ class DataDistiller:
     def _load_embeddings(self, epoch: int) -> float:
         '''
         Loads the previous epoch's embeddings and model performance from the JSON file they were stored in.
+
+        Input:
+            epoch: the current epoch number.
+
+        Returns:
+            metric: the performance metric value of the previous epoch.
         '''
 
         metric = 0.0
@@ -751,6 +786,28 @@ class DataDistiller:
 
         return metric
     
+    def _load_triplets(self, epoch: int) -> pd.DataFrame:
+        '''
+        Loads the previous epoch's triplet dataset from the CSV file it was stored in.
+
+        Inputs:
+            epoch: the current epoch number.
+
+        Returns:
+            df: the triplet dataset in a pandas DataFrame (None if epoch <= 0).
+        '''
+
+        df = None
+        if epoch > 0:
+            triplets_path = f'/triplets_epoch{epoch}.csv'
+
+            df = pd.read_csv(triplets_path)
+
+        if self.gpu_id == 0:
+            print('Previous Epoch\'s Triplets Loaded!')
+
+        return df
+
     # def _save_model_weights(self, best_model: nn.Module) -> bool:
     #     '''
     #     Saves the weights of the best model to the self.save_fp filepath.
