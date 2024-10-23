@@ -32,7 +32,9 @@ from torch.utils.data import DataLoader
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 
+from torchvision.transforms import Compose
 from torchvision.io import read_image
+
 import torch.distributed as dist
 import torch.optim as optim
 import torch.nn as nn
@@ -61,9 +63,10 @@ def ddp_setup(rank, world_size):
     init_process_group(backend='nccl', rank=rank, world_size=world_size)
 
 class DataDistiller:
-    def __init__(self, df: pd.DataFrame, train_dataloader: DataLoader, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
+    def __init__(self, df: pd.DataFrame, transform: Compose, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
-                 batch_size: int, nclasses: int, ntriplets: int, nworkers: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, triplets_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False):
+                 batch_size: int, nclasses: int, ntriplets: int, nworkers: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, triplets_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False, \
+                 max_attempts=100, p_max=1.0, margin=1.0, remine_freq=5):
         '''
         Initializes an instance of the DataDistiller class.
 
@@ -81,10 +84,10 @@ class DataDistiller:
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
-        self.__version__ = '0.6.0'
+        self.__version__ = '0.6.1'
 
         self.df = df
-        self.train_dataloader = train_dataloader
+        self.transform = transform
         self.valid_dataloader = valid_dataloader
 
         assert device in ['gpu', 'cpu'], f'Invalid device: needed \"cpu\" or \"gpu\", got \"{device}\".'
@@ -123,19 +126,15 @@ class DataDistiller:
         self.batch_size = batch_size
         self.nworkers = nworkers
 
-        self.ntriplets = ntriplets
-        self.thetas = thetas
-        self.pretr_model = pretr_model
-
         self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
         self.embeddings_dir = embeddings_dir.rstrip('/ ')
         self.triplets_dir = triplets_dir.rstrip('/ ')
 
         self.disable_progress_bar = disable_progress_bar
 
-        self.__init_mining(num_triplets=self.ntriplets, thetas=self.thetas, pretr_model=self.pretr_model)
+        self.__init_mining(num_triplets=ntriplets, thetas=thetas, pretr_model=pretr_model, max_attempts=max_attempts, p_max=p_max, margin=margin, remine_freq=remine_freq)
 
-    def __init_mining(self, num_triplets: int, thetas: List[float], pretr_model: str):
+    def __init_mining(self, num_triplets: int, thetas: List[float], pretr_model: str, max_attempts: int, p_max: float, margin: float, remine_freq: int):
         _valid_pretr_models = {
             'resnet152', 'vit_large_patch16_224_in21k', 'vit_large_patch14_224_clip_laion2b', 
             'tf_efficientnet_b5.ns_jft_in1k', 'tf_efficientnet_b6.ns_jft_in1k',
@@ -148,6 +147,10 @@ class DataDistiller:
         self.num_triplets = num_triplets
         self.thetas = thetas
         self.pretr_model = pretr_model
+        self.max_attempts = max_attempts
+        self.p_max = p_max
+        self.margin = margin
+        self.remine_freq = remine_freq
 
         if pretr_model == 'resnet152':
             self.pretr_model = timm.create_model(model_name='resnet152', pretrained=True, features_only=True)
@@ -165,9 +168,6 @@ class DataDistiller:
             self.pretr_model = timm.create_model('seresnext101d_32x8d.ah_in1k', pretrained=True, features_only=True)
         else:
             raise ValueError('Invalid Input for pretr_model argument.')
-        
-        if self.start_epoch == 0:
-            self._initial_embed()
         
     def _initial_embed(self) -> None:
         '''
@@ -227,7 +227,7 @@ class DataDistiller:
 
     def _mine(self, p: float, p_max: float, margin: float, epoch: int, max_attempts=100, transform=None) -> DataLoader:
         '''
-        TODO: Performs triplet mining using self.embeddings.
+        Performs triplet mining using self.embeddings.
 
         Inputs:
             p: the model's current performance metric value.
@@ -456,6 +456,8 @@ class DataDistiller:
             return epoch_tracker.min, epoch_tracker.max, epoch_tracker.avg
         
         elif self.use_triplet_data:
+
+
             loop = tqdm.tqdm(self.train_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
             # loop over dataloader to perform training
@@ -464,7 +466,7 @@ class DataDistiller:
             metric = Accuracy()
             acc_tracker = EpochTracker()
 
-            for batch, (anchor, positive, negative, y) in enumerate(loop):
+            for batch, (anchor_id, positive_id, negative_id, anchor_path, positive_path, negative_path, anchor, positive, negative, y) in enumerate(loop):
                 # move to CUDA if requested (and able)
                 if self.device == 'gpu' and torch.cuda.is_available():
                     anchor = anchor.to(self.gpu_id)
@@ -475,6 +477,10 @@ class DataDistiller:
                 # depending on model type, expect different outputs from forward pass
                 if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT) or isinstance(self.model, PVT):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
+
+                    self.embeddings[anchor_id][anchor_path] = z_anchor.item().flatten().to_list()
+                    self.embeddings[positive_id][positive_path] = z_positive.item().flatten().to_list()
+                    self.embeddings[negative_id][negative_path] = z_negative.item().flatten().to_list()
 
                     if Y is not None:
                         y_prob = torch.softmax(Y, dim=1)
@@ -602,7 +608,7 @@ class DataDistiller:
                 metric = Accuracy()
                 acc_tracker = EpochTracker()
                 
-                for batch, (anchor, positive, negative, y) in enumerate(loop):
+                for batch, (_, _, _, _, _, _, anchor, positive, negative, y) in enumerate(loop):
                     # move to CUDA if requested (and able)
                     if self.device == 'gpu' and torch.cuda.is_available():
                         anchor = anchor.to(self.gpu_id)
@@ -835,9 +841,26 @@ class DataDistiller:
         Returns:
             best_model: a PyTorch model representing a copy of the best model observed during validation.
         '''
-        
+
         # loop through passed number of epochs
         for epoch in range(self.start_epoch, self.nepochs):
+            # load previous epoch's embeddings (and possibly triplets, maybe save triplets if necessary)
+            if epoch == 0:
+                self._initial_embed()
+                self.train_dataloader = self._mine(0.0, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
+            else:
+                p = self._load_embeddings(epoch)
+
+                if epoch % self.remine_freq != 0:
+                    df = self._load_triplets(self.start_epoch)
+                    data = Triplets(df, self.transform)
+
+                    self.train_dataloader = DataLoader(data, batch_size=self.batch_size, num_workers=self.nworkers)
+                    self._save_triplets(df=df, epoch=epoch)
+                else:
+                    self.train_dataloader = self._mine(p, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
+                    self._save_triplets(df=self.train_dataloader.dataset.df, epoch=epoch)
+            
             # load previous epoch's checkpoint
             self._load_checkpoint(epoch)
 
@@ -848,14 +871,20 @@ class DataDistiller:
                 print('-' * 93)
 
             # perform training on current epoch
+            p = 0.0
             if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
                 train_min, train_max, train_avg = self._train(epoch=epoch)
                 self.train_logger.add(train_min, train_max, train_avg)
             else:
                 train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch)
-                
+                p = train_acc_avg
+
                 self.train_logger.add(train_min, train_max, train_avg)
                 self.acc_train_logger.add(train_acc_min, train_acc_max, train_acc_avg)
+
+            # save embeddings
+            if (self.ddp and self.device == 'gpu' and self.gpu_id == 0) or not self.ddp:
+                self._save_embeddings(epoch=epoch, metric=p)
 
             # perform validation on current epoch
             if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
