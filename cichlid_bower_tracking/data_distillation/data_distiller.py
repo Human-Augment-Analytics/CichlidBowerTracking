@@ -135,6 +135,19 @@ class DataDistiller:
         self.__init_mining(num_triplets=ntriplets, thetas=thetas, pretr_model=pretr_model, max_attempts=max_attempts, p_max=p_max, margin=margin, remine_freq=remine_freq)
 
     def __init_mining(self, num_triplets: int, thetas: List[float], pretr_model: str, max_attempts: int, p_max: float, margin: float, remine_freq: int):
+        '''
+        Initializes all the triplet mining-specific components.
+
+        Inputs:
+            num_triplets: the (maximum) total number of triplets to mine during every run of self._mine.
+            thetas: the performance metric value constraints; used by the substrategy rate scheduler.
+            pretr_model: the pre-trained model to be used in generating initial embeddings (until p > thetas[0]).
+            max_attempts: the maximum number of attempts to use when mining semi-hard and hard negative triplets.
+            p_max: the maximum possible value of the performance metric of choice.
+            margin: the triplet margin.
+            remine_freq: the frequency at which remining occurs (once every x epochs).
+        '''
+        
         _valid_pretr_models = {
             'resnet152', 'vit_large_patch16_224_in21k', 'vit_large_patch14_224_clip_laion2b', 
             'tf_efficientnet_b5.ns_jft_in1k', 'tf_efficientnet_b6.ns_jft_in1k',
@@ -852,7 +865,7 @@ class DataDistiller:
                 p = self._load_embeddings(epoch)
 
                 if epoch % self.remine_freq != 0:
-                    df = self._load_triplets(self.start_epoch)
+                    df = self._load_triplets(epoch)
                     data = Triplets(df, self.transform)
 
                     self.train_dataloader = DataLoader(data, batch_size=self.batch_size, num_workers=self.nworkers)
