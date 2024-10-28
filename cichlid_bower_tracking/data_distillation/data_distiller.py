@@ -65,7 +65,7 @@ def ddp_setup(rank, world_size):
 class DataDistiller:
     def __init__(self, df: pd.DataFrame, transform: Compose, valid_dataloader: DataLoader, model: Union[TCAiT, SiameseAutoencoder, TripletAutoencoder, SiameseViTAutoencoder, TripletViTAutoencoder, TCAiTExtractor, PyraTCAiT, PVT], \
                  scheduler: Union[optim.lr_scheduler.ReduceLROnPlateau, WarmupCosineScheduler], loss_fn: Union[TripletClassificationLoss, TotalTripletLoss, TotalSiameseLoss, TripletLoss, nn.CrossEntropyLoss], optimizer: optim.Optimizer, nepochs: int, \
-                 batch_size: int, nclasses: int, ntriplets: int, nworkers: int, thetas: List[float], pretr_model: str, checkpoints_dir: str, embeddings_dir: str, triplets_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False, \
+                 batch_size: int, nclasses: int, ntriplets: int, nworkers: int, thetas: List[float], pretr_model: str, base_data_dir: str, checkpoints_dir: str, embeddings_dir: str, triplets_dir: str, device: str, gpu_id: int, start_epoch=0, ddp=False, disable_progress_bar=False, \
                  max_attempts=100, p_max=1.0, margin=1.0, remine_freq=5):
         '''
         Initializes an instance of the DataDistiller class.
@@ -126,6 +126,7 @@ class DataDistiller:
         self.batch_size = batch_size
         self.nworkers = nworkers
 
+        self.base_data_dir = base_data_dir.rstrip('/ ')
         self.checkpoints_dir = checkpoints_dir.rstrip('/ ')
         self.embeddings_dir = embeddings_dir.rstrip('/ ')
         self.triplets_dir = triplets_dir.rstrip('/ ')
@@ -196,6 +197,7 @@ class DataDistiller:
             subset = self.df[self.df['identity'] == unique_id]
 
             for path in subset['path'].to_list():
+                path = self.base_data_dir + '/' + path
                 img = read_image(path).float()
                 embed = self.pretr_model(img)[-1]
 
