@@ -198,7 +198,7 @@ class DataDistiller:
 
             for path in subset['path'].to_list():
                 path = self.base_data_dir + '/' + path
-                img = read_image(path).float().reshape(1, -1)
+                img = read_image(path).float()
                 embed = self.pretr_model(img)[-1]
 
                 self.embeddings[unique_id][path] = embed.item().flatten().to_list()
