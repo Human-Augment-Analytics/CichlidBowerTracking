@@ -194,8 +194,9 @@ class DataDistiller:
 
         unique_ids = self.df['identity'].unique()
         for unique_id in unique_ids:
-            subset = self.df[self.df['identity'] == unique_id]
+            self.embeddings[unique_id] = dict()
 
+            subset = self.df[self.df['identity'] == unique_id]
             for path in subset['path'].to_list():
                 path = self.base_data_dir + '/' + path
                 img = read_image(path).float().unsqueeze(0)
