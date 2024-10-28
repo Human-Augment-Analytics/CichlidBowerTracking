@@ -860,6 +860,7 @@ class DataDistiller:
         # loop through passed number of epochs
         for epoch in range(self.start_epoch, self.nepochs):
             # load previous epoch's embeddings (and possibly triplets, maybe save triplets if necessary)
+            p = 0.0
             if epoch == 0:
                 self._initial_embed()
                 self.train_dataloader = self._mine(0.0, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
@@ -888,10 +889,10 @@ class DataDistiller:
             # perform training on current epoch
             p = 0.0
             if not isinstance(self.model, TCAiT) and not isinstance(self.model, PyraTCAiT) and not isinstance(self.model, PVT):
-                train_min, train_max, train_avg = self._train(epoch=epoch)
+                train_min, train_max, train_avg = self._train(epoch=epoch, replace_embeds=False)
                 self.train_logger.add(train_min, train_max, train_avg)
             else:
-                train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch)
+                train_min, train_max, train_avg, train_acc_min, train_acc_max, train_acc_avg = self._train(epoch=epoch, replace_embeds=(p > self.thetas[0]))
                 p = train_acc_avg
 
                 self.train_logger.add(train_min, train_max, train_avg)
