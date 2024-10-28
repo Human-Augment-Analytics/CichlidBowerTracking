@@ -410,12 +410,13 @@ class DataDistiller:
 
         return hards
 
-    def _train(self, epoch: int) -> Tuple[float]:
+    def _train(self, epoch: int, replace_embeds: bool) -> Tuple[float]:
         '''
         For a given epoch, performs batch training.
 
         Inputs:
             epoch: an integer representing the current epoch of training.
+            replace_embeds: a Boolean indicating the PyraT-CAiT has sufficient performace to use its own embeddings in triplet mining.
 
         Returns:
             epoch_tracker.min: the minimum loss stored in the epoch_tracker.
@@ -491,9 +492,10 @@ class DataDistiller:
                 if isinstance(self.model, TCAiT) or isinstance(self.model, PyraTCAiT) or isinstance(self.model, PVT):
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
-                    self.embeddings[anchor_id][anchor_path] = z_anchor.item().flatten().to_list()
-                    self.embeddings[positive_id][positive_path] = z_positive.item().flatten().to_list()
-                    self.embeddings[negative_id][negative_path] = z_negative.item().flatten().to_list()
+                    if replace_embeds:
+                        self.embeddings[anchor_id][anchor_path] = z_anchor.item().flatten().to_list()
+                        self.embeddings[positive_id][positive_path] = z_positive.item().flatten().to_list()
+                        self.embeddings[negative_id][negative_path] = z_negative.item().flatten().to_list()
 
                     if Y is not None:
                         y_prob = torch.softmax(Y, dim=1)
