@@ -744,7 +744,7 @@ class DataDistiller:
             epoch: the current epoch number.
         '''
 
-        triplets_path = f'/triplets_epoch{epoch}.csv'
+        triplets_path = self.triplets_dir + f'/triplets_epoch{epoch}.csv'
 
         df.to_csv(triplets_path)
 
@@ -820,7 +820,7 @@ class DataDistiller:
 
         df = None
         if epoch > 0:
-            triplets_path = f'/triplets_epoch{epoch}.csv'
+            triplets_path = self.triplets_dir + f'/triplets_epoch{epoch}.csv'
 
             df = pd.read_csv(triplets_path)
 
