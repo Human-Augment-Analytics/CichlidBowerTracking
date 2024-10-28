@@ -201,7 +201,7 @@ class DataDistiller:
                 img = read_image(path).float().unsqueeze(0)
                 embed = self.pretr_model(img)[-1]
 
-                self.embeddings[unique_id][path] = embed.detach().numpy().to_list()
+                self.embeddings[unique_id][path] = embed.detach().numpy().tolist()
 
     def _omegas(self, p: float, p_max: float) -> Tuple[float]:
         '''
