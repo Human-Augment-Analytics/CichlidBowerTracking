@@ -107,8 +107,8 @@ class DataDistiller:
         self.optimizer = optimizer
         self.scheduler = scheduler
 
-        # self.use_pairwise_data = isinstance(self.train_dataloader.dataset, Pairs)
-        self.use_triplet_data = isinstance(self.train_dataloader.dataset, Triplets) or isinstance(self.train_dataloader.dataset, TestTriplets)
+        self.use_pairwise_data = isinstance(self.valid_dataloader.dataset, Pairs)
+        self.use_triplet_data = isinstance(self.valid_dataloader.dataset, Triplets) or isinstance(self.valid_dataloader.dataset, TestTriplets)
 
         self.train_logger = EpochLogger(value_type='Training Loss')
         self.valid_logger = EpochLogger(value_type='Validation Loss')
