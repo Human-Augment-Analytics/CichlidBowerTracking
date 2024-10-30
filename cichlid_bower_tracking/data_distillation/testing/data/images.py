@@ -51,7 +51,7 @@ class Images(Dataset):
         identity, path = self.df.iloc[index]
         path = self.base_dir + '/' + path
 
-        img = read_image(path=path)
+        img = read_image(path=path).float()
         if self.transform:
             img = self.transform(img)
 
