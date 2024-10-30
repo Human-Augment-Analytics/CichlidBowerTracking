@@ -183,7 +183,7 @@ class DataDistiller:
         else:
             raise ValueError('Invalid Input for pretr_model argument.')
         
-    def _initial_embed(self) -> None:
+    def _initial_embed(self, debug=False) -> None:
         '''
         Generates the initial embeddings store for triplet mining using self.df.
 
@@ -193,7 +193,7 @@ class DataDistiller:
         self.embeddings = dict()
 
         unique_ids = self.df['identity'].unique()
-        for unique_id in unique_ids:
+        for i, unique_id in enumerate(unique_ids):
             self.embeddings[unique_id] = dict()
 
             subset = self.df[self.df['identity'] == unique_id]
@@ -203,6 +203,9 @@ class DataDistiller:
                 embed = self.pretr_model(img)[-1]
 
                 self.embeddings[unique_id][path] = embed.detach().numpy().tolist()
+
+            if debug and i % 100 == 0:
+                print(f'{i + 1} IDs embedded')
 
     def _omegas(self, p: float, p_max: float) -> Tuple[float]:
         '''
