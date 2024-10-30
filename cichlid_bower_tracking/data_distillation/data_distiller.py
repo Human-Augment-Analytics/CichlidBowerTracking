@@ -34,8 +34,6 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group
 
 from torchvision.transforms import Compose
-from torchvision.io import read_image
-
 import torch.distributed as dist
 import torch.optim as optim
 import torch.nn as nn
@@ -88,7 +86,7 @@ class DataDistiller:
         self.__version__ = '0.6.2'
 
         self.df = df
-        self.transform = transform
+        self.transform = Compose(transform)
         self.valid_dataloader = valid_dataloader
 
         assert device in ['gpu', 'cpu'], f'Invalid device: needed \"cpu\" or \"gpu\", got \"{device}\".'
