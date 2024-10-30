@@ -225,7 +225,7 @@ class DataDistiller:
         images_dataset = Images(self.df, self.base_data_dir, transform=self.transform)
         images_dataloader = DataLoader(images_dataset, batch_size=self.batch_size, num_workers=self.nworkers)
 
-        nbatches = self.nbatches
+        nbatches = len(images_dataloader)
         with torch.no_grad():
             loop = tqdm.tqdm(images_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
