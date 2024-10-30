@@ -183,6 +183,8 @@ class DataDistiller:
         else:
             raise ValueError('Invalid Input for pretr_model argument.')
         
+        self.pretr_model.eval()
+        
     def _initial_embed(self, debug=False) -> None:
         '''
         Generates the initial embeddings store for triplet mining using self.df.
@@ -192,20 +194,22 @@ class DataDistiller:
 
         self.embeddings = dict()
 
-        unique_ids = self.df['identity'].unique()
-        for i, unique_id in enumerate(unique_ids):
-            self.embeddings[unique_id] = dict()
+        with torch.no_grad():
+            unique_ids = self.df['identity'].unique()
+            
+            for i, unique_id in enumerate(unique_ids):
+                self.embeddings[unique_id] = dict()
 
-            subset = self.df[self.df['identity'] == unique_id]
-            for path in subset['path'].to_list():
-                path = self.base_data_dir + '/' + path
-                img = read_image(path).float().unsqueeze(0)
-                embed = self.pretr_model(img)[-1]
+                subset = self.df[self.df['identity'] == unique_id]
+                for path in subset['path'].to_list():
+                    path = self.base_data_dir + '/' + path
+                    img = read_image(path).float().unsqueeze(0)
+                    embed = self.pretr_model(img)[-1]
 
-                self.embeddings[unique_id][path] = embed.detach().numpy().tolist()
+                    self.embeddings[unique_id][path] = embed.detach().numpy().tolist()
 
-            if debug and i % 100 == 0:
-                print(f'{i + 1} IDs embedded')
+                if debug and i % 100 == 0:
+                    print(f'{i + 1} IDs embedded')
 
     def _omegas(self, p: float, p_max: float) -> Tuple[float]:
         '''
