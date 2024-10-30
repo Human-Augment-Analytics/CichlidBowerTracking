@@ -26,6 +26,7 @@ from data_distillation.misc.intra_epoch_logger import IntraEpochLogger
 from data_distillation.testing.data.pairs import Pairs
 from data_distillation.testing.data.triplets import Triplets
 from data_distillation.testing.data.test_triplets import TestTriplets
+from data_distillation.testing.data.images import Images
 from data_distillation.testing.metrics.accuracy import Accuracy
 
 from torch.utils.data import DataLoader
@@ -84,7 +85,7 @@ class DataDistiller:
             disable_progress_bar: a Boolean flag indicating whether or not a progress bar should be printed; defaults to False.
         '''
         
-        self.__version__ = '0.6.1'
+        self.__version__ = '0.6.2'
 
         self.df = df
         self.transform = transform
@@ -183,33 +184,64 @@ class DataDistiller:
         else:
             raise ValueError('Invalid Input for pretr_model argument.')
         
+        if self.device == 'gpu' and torch.cuda.is_available():
+            self.pretr_model.to(device=self.gpu_id)
+    
         self.pretr_model.eval()
         
-    def _initial_embed(self, debug=False) -> None:
+    def _initial_embed(self, debug=False,) -> None:
         '''
         Generates the initial embeddings store for triplet mining using self.df.
 
-        Inputs: None
+        Inputs:
+            batch_size: the batch size to be used in generating the initial embeddings; defaults to 1.
+            debug: adds print statements to the function when true.
         '''
 
         self.embeddings = dict()
 
+        # with torch.no_grad():
+        #     unique_ids = self.df['identity'].unique()
+
+        #     for i, unique_id in enumerate(unique_ids):
+        #         self.embeddings[unique_id] = dict()
+
+        #         subset = self.df[self.df['identity'] == unique_id].to_list()
+
+        #         for path in subset['path'].to_list():
+        #             path = self.base_data_dir + '/' + path
+        #             img = read_image(path).float().unsqueeze(0)
+
+        #             if self.device == 'gpu' and torch.cuda.is_available():
+        #                 img = img.to(device=self.gpu_id)
+
+        #             embed = self.pretr_model(img)[-1]
+
+        #             self.embeddings[unique_id][path] = embed.detach().cpu().numpy().tolist()
+
+        #         if debug and i % 100 == 0:
+        #             print(f'{i + 1} IDs embedded')
+
+        images_dataset = Images(self.df, self.base_data_dir, transform=self.transform)
+        images_dataloader = DataLoader(images_dataset, batch_size=self.batch_size, num_workers=self.nworkers)
+
+        nbatches = self.nbatches
         with torch.no_grad():
-            unique_ids = self.df['identity'].unique()
-            
-            for i, unique_id in enumerate(unique_ids):
-                self.embeddings[unique_id] = dict()
+            loop = tqdm.tqdm(images_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
 
-                subset = self.df[self.df['identity'] == unique_id]
-                for path in subset['path'].to_list():
-                    path = self.base_data_dir + '/' + path
-                    img = read_image(path).float().unsqueeze(0)
-                    embed = self.pretr_model(img)[-1]
+            for batch, (identities, paths, imgs) in enumerate(loop):
+                if self.device == 'gpu' and torch.cuda.is_available():
+                    imgs = imgs.to(device=self.gpu_id)
 
-                    self.embeddings[unique_id][path] = embed.detach().numpy().tolist()
+                embeds = self.pretr_model(imgs)[-1].detach().cpu().numpy()
+                for i in range(len(identities)):
+                    identity, path, embed = identities[i], paths[i], embeds[i].tolist()
 
-                if debug and i % 100 == 0:
-                    print(f'{i + 1} IDs embedded')
+                    if identity not in self.embeddings:
+                        self.embeddings[identity] = dict()
+                        self.embeddings[identity][path] = embed
+
+                loop.set_description(f'Validation, Batch [{batch}/{nbatches}]')
 
     def _omegas(self, p: float, p_max: float) -> Tuple[float]:
         '''
