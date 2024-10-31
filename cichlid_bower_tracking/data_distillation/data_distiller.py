@@ -836,10 +836,10 @@ class DataDistiller:
             with open(embeddings_path, 'r') as file:
                 tmp = json.load(file)
 
-                assert epoch == int(tmp['epoch']), f'Error: Previous epoch ({epoch - 1}) doesn\'t match stored epoch ({tmp["epoch"]}).'
+                assert epoch - 1 == tmp['epoch'], f'Error: Previous epoch ({epoch - 1}) doesn\'t match stored epoch ({tmp["epoch"]}).'
                 
                 self.embeddings = tmp['store']
-                metric = float(tmp['metric'])
+                metric = tmp['metric']
 
                 del tmp
 
