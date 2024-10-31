@@ -40,6 +40,7 @@ import torch.nn as nn
 import torch
 import timm
 
+from sklearn.decomposition import IncrementalPCA
 from scipy.spatial.distance import euclidean
 import numpy as np
 import pandas as pd
@@ -187,7 +188,7 @@ class DataDistiller:
     
         self.pretr_model.eval()
         
-    def _initial_embed(self, debug=False,) -> None:
+    def _initial_embed(self, embed_dim: 256, debug=False,) -> None:
         '''
         Generates the initial embeddings store for triplet mining using self.df.
 
@@ -203,15 +204,28 @@ class DataDistiller:
 
         nbatches = len(images_dataloader)
         with torch.no_grad():
-            loop = tqdm.tqdm(images_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
+            # initialize random projection
+            _, _, imgs = images_dataloader[0]
+            out_dim = self.pretr_model(imgs)[-1][0].flatten(start_dim=0).shape[0]
 
+            weights = torch.randn(out_dim, embed_dim)
+            weights = weights / torch.norm(weights, dim=1, keepdim=True)
+
+            proj = nn.Linear(out_dim, embed_dim, bias=False)
+            proj.weight.copy_(weights)
+
+            # generate initial embeddings
+            loop = tqdm.tqdm(images_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
             for batch, (identities, paths, imgs) in enumerate(loop):
                 if self.device == 'gpu' and torch.cuda.is_available():
                     imgs = imgs.to(device=self.gpu_id)
 
-                embeds = self.pretr_model(imgs)[-1].detach().cpu().numpy()
+                embeds = self.pretr_model(imgs)[-1].flatten(start_dim=1)
+                embeds = proj(embeds).detach().cpu().numpy().tolist()
+
+                # store the embeddings
                 for i in range(len(identities)):
-                    identity, path, embed = identities[i], paths[i], embeds[i].tolist()
+                    identity, path, embed = identities[i], paths[i], embeds[i]
 
                     if identity not in self.embeddings:
                         self.embeddings[identity] = dict()
