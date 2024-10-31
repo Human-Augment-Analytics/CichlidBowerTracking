@@ -188,7 +188,7 @@ class DataDistiller:
     
         self.pretr_model.eval()
         
-    def _initial_embed(self, embed_dim: 256, debug=False,) -> None:
+    def _initial_embed(self, embed_dim=256, debug=False,) -> None:
         '''
         Generates the initial embeddings store for triplet mining using self.df.
 
