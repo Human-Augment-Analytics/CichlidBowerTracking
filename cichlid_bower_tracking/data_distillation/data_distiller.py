@@ -205,7 +205,7 @@ class DataDistiller:
         nbatches = len(images_dataloader)
         with torch.no_grad():
             # initialize random projection
-            _, _, imgs = images_dataloader[0]
+            _, _, imgs = next(iter(images_dataloader))
             out_dim = self.pretr_model(imgs)[-1][0].flatten(start_dim=0).shape[0]
 
             weights = torch.randn(out_dim, embed_dim)
