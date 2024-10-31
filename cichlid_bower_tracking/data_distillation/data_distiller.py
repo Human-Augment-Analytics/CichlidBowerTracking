@@ -206,6 +206,9 @@ class DataDistiller:
         with torch.no_grad():
             # initialize random projection
             _, _, imgs = next(iter(images_dataloader))
+            if self.device == 'gpu' and torch.cuda.is_available():
+                imgs = imgs.to(device=self.gpu_id)
+
             out_dim = self.pretr_model(imgs)[-1][0].flatten(start_dim=0).shape[0]
 
             weights = torch.randn(out_dim, embed_dim)
