@@ -217,6 +217,9 @@ class DataDistiller:
             proj = nn.Linear(out_dim, embed_dim, bias=False)
             proj.weight.copy_(weights)
 
+            if self.device == 'gpu' and torch.cuda.is_available():
+                proj = proj.to(device=self.gpu_id)
+
             # generate initial embeddings
             loop = tqdm.tqdm(images_dataloader, total=nbatches, disable=(self.disable_progress_bar or (self.ddp and self.gpu_id != 0)))
             for batch, (identities, paths, imgs) in enumerate(loop):
