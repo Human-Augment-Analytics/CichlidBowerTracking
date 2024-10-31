@@ -211,7 +211,7 @@ class DataDistiller:
 
             out_dim = self.pretr_model(imgs)[-1][0].flatten(start_dim=0).shape[0]
 
-            weights = torch.randn(out_dim, embed_dim)
+            weights = torch.randn(embed_dim, out_dim)
             weights = weights / torch.norm(weights, dim=1, keepdim=True)
 
             proj = nn.Linear(out_dim, embed_dim, bias=False)
