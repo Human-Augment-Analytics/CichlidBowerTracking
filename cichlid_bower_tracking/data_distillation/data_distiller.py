@@ -834,7 +834,9 @@ class DataDistiller:
             embeddings_path = self.embeddings_dir + f'/embeddings_epoch{epoch - 1}.json'
         
             with open(embeddings_path, 'r') as file:
-                tmp = json.load(file)['store']
+                tmp = json.load(file)
+
+                assert epoch == tmp['epoch'], f'Error: Current epoch ({epoch}) doesn\'t match stored epoch ({tmp["epoch"]}).'
                 
                 self.embeddings = tmp['store']
                 metric = tmp['metric']
