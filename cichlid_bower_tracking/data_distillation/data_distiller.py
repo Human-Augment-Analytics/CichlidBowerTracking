@@ -408,7 +408,7 @@ class DataDistiller:
                 anchor_positive_distance = euclidean(anchor_embed, positive_embed)
                 anchor_negative_distance = euclidean(anchor_embed, negative_embed)
 
-                if anchor_positive_distance < anchor_negative_distance < anchor_positive_distance + margin:
+                if 0 < anchor_positive_distance < anchor_negative_distance < anchor_positive_distance + margin:
                     found_semihard = True
                     distance_row = {
                         'anchor_positive': anchor_positive_distance,
@@ -486,7 +486,7 @@ class DataDistiller:
                 anchor_positive_distance = euclidean(anchor_embed, positive_embed)
                 anchor_negative_distance = euclidean(anchor_embed, negative_embed)
 
-                if anchor_negative_distance < anchor_positive_distance:
+                if 0 < anchor_negative_distance < anchor_positive_distance:
                     found_hard = True
                     distance_row = {
                         'anchor_positive': anchor_positive_distance,
