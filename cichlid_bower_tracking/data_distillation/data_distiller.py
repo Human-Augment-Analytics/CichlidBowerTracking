@@ -933,7 +933,7 @@ class DataDistiller:
         if epoch > 0:
             triplets_path = self.triplets_dir + f'/triplets_epoch{epoch - 1}.csv'
 
-            df = pd.read_csv(triplets_path)
+            df = pd.read_csv(triplets_path).iloc[:, 1:]
 
         if self.gpu_id == 0:
             print('Previous Epoch\'s Triplets Loaded!')
