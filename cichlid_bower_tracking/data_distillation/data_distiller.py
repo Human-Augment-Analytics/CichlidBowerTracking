@@ -317,6 +317,16 @@ class DataDistiller:
         return dataloader
 
     def _random_mine(self, num_triplets: int) -> List[Dict]:
+        '''
+        The implementation of the random mining substrategy.
+
+        Inputs:
+            num_triplets: The number of random triplets to return.
+
+        Returns:
+            rands: the list of randomly selected triplets, specifically each sample's identity and filepath.
+        '''
+
         rands = []
 
         for _ in range(num_triplets):
@@ -353,8 +363,22 @@ class DataDistiller:
 
         return rands
     
-    def _semihard_mine(self, num_triplets: int, margin: float, max_attempts=100) -> List[Dict]:
+    def _semihard_mine(self, num_triplets: int, margin: float, max_attempts=100, debug=False) -> Union[List[Dict], Tuple[List[Dict]]]:
+        '''
+        The implementation of the semi-hard triplet mining strategy.
+
+        Inputs:
+            num_triplets: the (maximum) number of semi-hard triplets to return.
+            margin: the margin to use in recognizing semi-hard triplets.
+            max_attempts: the maximum number of attempts (per triplet) before giving up and moving on.
+            debug: A Boolean indicating whether or not the distances for each triplet should be returned as well.
+
+        Returns:
+            out: if debug is False, just the mined semi-hard triplets; otherwise, this is a tuple containing the triplets and their respective distances.
+        '''
+        
         semihards = []
+        distances = []
         attempt = 0
 
         while len(semihards) < num_triplets and attempt < num_triplets * max_attempts:
@@ -381,8 +405,18 @@ class DataDistiller:
                 negative_path = random.choice(list(self.embeddings[negative_id].keys()))
                 negative_embed = self.embeddings[negative_id][negative_path]
 
-                if euclidean(anchor_embed, positive_embed) < euclidean(anchor_embed, negative_embed) < euclidean(anchor_embed, positive_embed) + margin:
+                anchor_positive_distance = euclidean(anchor_embed, positive_embed)
+                anchor_negative_distance = euclidean(anchor_embed, negative_embed)
+
+                if anchor_positive_distance < anchor_negative_distance < anchor_positive_distance + margin:
                     found_semihard = True
+                    distance_row = {
+                        'anchor_positive': anchor_positive_distance,
+                        'anchor_negative': anchor_negative_distance,
+                        'anchor_positive_margin': anchor_positive_distance + margin
+                    }
+
+                    distances.append(distance_row)
                     break
 
             if found_semihard:
@@ -399,10 +433,30 @@ class DataDistiller:
 
             attempt += 1
 
-        return semihards
+        if debug:
+            out = semihards, distances
+        else:
+            out = semihards
+
+        print(f'{len(semihards)} Semi-Hard Negative Mined Triplets Selected!')
+
+        return out
     
-    def _hard_mine(self, num_triplets: int, max_attempts=100) -> List[Dict]:
+    def _hard_mine(self, num_triplets: int, max_attempts=100, debug=False) -> Union[List[Dict], Tuple[List[Dict]]]:
+        '''
+        The implementation of the hard triplet mining strategy.
+
+        Inputs:
+            num_triplets: the (maximum) number of hard triplets to return.
+            max_attempts: the maximum number of attempts (per triplet) before giving up and moving on.
+            debug: A Boolean indicating whether or not the distances for each triplet should be returned as well.
+
+        Returns:
+            out: if debug is False, just the mined hard triplets; otherwise, this is a tuple containing the triplets and their respective distances.
+        '''
+         
         hards = []
+        distances = []
         attempt = 0
 
         while len(hards) < num_triplets and attempt < num_triplets * max_attempts:
@@ -429,8 +483,17 @@ class DataDistiller:
                 negative_path = random.choice(list(self.embeddings[negative_id].keys()))
                 negative_embed = self.embeddings[negative_id][negative_path]
 
-                if euclidean(anchor_embed, negative_embed) < euclidean(anchor_embed, positive_embed):
+                anchor_positive_distance = euclidean(anchor_embed, positive_embed)
+                anchor_negative_distance = euclidean(anchor_embed, negative_embed)
+
+                if anchor_negative_distance < anchor_positive_distance:
                     found_hard = True
+                    distance_row = {
+                        'anchor_positive': anchor_positive_distance,
+                        'anchor_negative': anchor_negative_distance
+                    }
+
+                    distances.append(distance_row)
                     break
 
             if found_hard:
@@ -447,7 +510,14 @@ class DataDistiller:
 
             attempt += 1
 
-        return hards
+        if debug:
+            out = hards, distances
+        else:
+            out = hards
+
+        print(f'{len(hards)} Hard Negative Mined Triplets Selected!')
+
+        return out
 
     def _train(self, epoch: int, replace_embeds: bool) -> Tuple[float]:
         '''
