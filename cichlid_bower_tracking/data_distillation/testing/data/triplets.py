@@ -1,23 +1,25 @@
-from typing import Tuple
+from typing import Tuple, Dict
 
 import pandas as pd
 from torch.utils.data.dataset import Dataset
 from torchvision.io import read_image
 
 class Triplets(Dataset):
-    def __init__(self, df: pd.DataFrame, transform=None):
+    def __init__(self, df: pd.DataFrame, id_str2int: Dict[str, int], transform=None):
         '''
         Initializes an instance of a Triplets PyTorch dataset.
 
         Inputs:
             df: a pandas DataFrame containing triples of image filepaths.
+            id_str2int: a dictionary mapping identity strings to integer values for a model to use.
             transform: a set of PyTorch transforms to be performed on every image.
         '''
         super(Triplets, self).__init__()
 
-        self.__version__ = '0.1.1'
+        self.__version__ = '0.2.0'
 
         self.df = df
+        self.id_str2int = id_str2int
         self.transform = transform
 
     def __len__(self) -> int:
@@ -48,10 +50,12 @@ class Triplets(Dataset):
             anchor: the anchor image in the triplet at the passed index.
             positive: the positive image (similar to anchor) in the triplet at the passed index.
             negative: the negative image (dissimilar to anchor) in the triplet at the passed index.
+            y: an integer value representing the anchor_id.
         '''
 
         anchor_id, positive_id, negative_id, anchor_path, positive_path, negative_path = self.df.iloc[index]
         anchor, positive, negative = read_image(anchor_path).float(), read_image(positive_path).float(), read_image(negative_path).float()
+        y = self.id_str2int[anchor_id]
 
         if self.transform:
             anchor = self.transform(anchor)
@@ -62,4 +66,4 @@ class Triplets(Dataset):
         assert positive.shape[0] == 3, f'Positive @ {positive_path} is not RGB!'
         assert negative.shape[0] == 3, f'Negative @ {negative_path} is not RGB!'
 
-        return (anchor_id, positive_id, negative_id, anchor_path, positive_path, negative_path, anchor, positive, negative)
+        return (anchor_id, positive_id, negative_id, anchor_path, positive_path, negative_path, anchor, positive, negative, y)

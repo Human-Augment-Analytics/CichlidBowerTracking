@@ -198,6 +198,7 @@ class DataDistiller:
         '''
 
         self.embeddings = dict()
+        self.id_str2int = dict()
 
         images_dataset = Images(self.df, self.base_data_dir, transform=self.transform)
         images_dataloader = DataLoader(images_dataset, batch_size=self.batch_size, num_workers=self.nworkers)
@@ -229,14 +230,17 @@ class DataDistiller:
                 embeds = self.pretr_model(imgs)[-1].flatten(start_dim=1)
                 embeds = proj(embeds).detach().cpu().numpy().tolist()
 
-                # store the embeddings
+                # store the embeddings and identity integers
                 for i in range(len(identities)):
                     identity, path, embed = identities[i], paths[i], embeds[i]
 
                     if identity not in self.embeddings:
                         self.embeddings[identity] = dict()
+                    if identity not in self.id_str2int:
+                        self.id_str2int[identity] = len(self.id_str2int)
                     
                     self.embeddings[identity][path] = embed
+
 
                 loop.set_description(f'Initial Embedding, Batch [{batch}/{nbatches}]')
 
