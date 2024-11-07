@@ -241,9 +241,8 @@ class DataDistiller:
                     
                     self.embeddings[identity][path] = embed
 
-
                 loop.set_description(f'Initial Embedding, Batch [{batch}/{nbatches}]')
-
+    
     def _omegas(self, p: float, p_max: float) -> Tuple[float]:
         '''
         Determines the triplet mining strategy's percentages (omega_1, omega_2, omega_3) based on performance thresholds (theta_1, theta_2) and the maximum possible performance.
@@ -864,6 +863,20 @@ class DataDistiller:
         if self.gpu_id == 0:
             print(f'Epoch {epoch} Triplets Saved!')
 
+    def _save_id_str2int(self) -> None:
+        '''
+        Saves the content of self.id_str2int in a JSON file.
+
+        Inputs: None.
+        '''
+
+        id_str2int_path = self.embeddings_dir + '/id_str2int.json'
+        with open(id_str2int_path, 'w') as file:
+            json.dump(self.id_str2int, file)
+
+        if self.gpu_id == 0:
+            print('Identity String-to-Integer Dictionary Saved!')
+
     def _load_checkpoint(self, epoch: int) -> None:
         '''
         Loads the previous epoch's model and optimizer state dictionaries from its checkpoint file into the current model and optimizer.
@@ -944,6 +957,18 @@ class DataDistiller:
 
         return df
 
+    def _load_id_str2int(self) -> None:
+        '''
+        Loads the id_str2int dictionary previously stored in a JSON file.
+        '''
+
+        id_str2int_path = self.embeddings_dir + '/id_str2int.json'
+        with open(id_str2int_path, 'r') as file:
+            self.id_str2int = json.load(file)
+
+        if self.gpu_id == 0:
+            print('Identity String-to-Integer Dictionary Loaded!')
+
     # def _save_model_weights(self, best_model: nn.Module) -> bool:
     #     '''
     #     Saves the weights of the best model to the self.save_fp filepath.
@@ -978,8 +1003,11 @@ class DataDistiller:
             p = 0.0
             if epoch == 0:
                 self._initial_embed()
+                self._save_id_str2int()
+
                 self.train_dataloader = self._mine(0.0, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
             else:
+                self._load_id_str2int()
                 p = self._load_embeddings(epoch)
 
                 if epoch % self.remine_freq != 0:
