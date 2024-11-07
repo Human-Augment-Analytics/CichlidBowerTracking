@@ -1012,7 +1012,7 @@ class DataDistiller:
 
                 if epoch % self.remine_freq != 0:
                     df = self._load_triplets(epoch)
-                    data = Triplets(df, self.transform)
+                    data = Triplets(df, self.id_str2int, self.transform)
 
                     self.train_dataloader = DataLoader(data, batch_size=self.batch_size, num_workers=self.nworkers)
                     self._save_triplets(df=df, epoch=epoch)
