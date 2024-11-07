@@ -314,7 +314,7 @@ class DataDistiller:
 
         self._save_triplets(df, epoch=epoch)
 
-        dataset = Triplets(df, transform=transform)
+        dataset = Triplets(df, self.id_str2int, transform=transform)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, num_workers=self.nworkers)
 
         return dataloader
