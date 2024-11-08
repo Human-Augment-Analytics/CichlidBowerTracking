@@ -52,8 +52,15 @@ class TripletClassificationLoss(nn.Module):
         ce_loss = self.ce_loss(y_prob, y_true)
 
         if self.use_dynamic_weighting:
-            triplet_loss /= (triplet_loss + self.epsilon)
-            ce_loss /= (ce_loss + self.epsilon)
+            triplet_weight = (triplet_loss + self.epsilon)
+            ce_weight = (ce_loss + self.epsilon)
+            total_weight = triplet_weight + ce_weight
+
+            triplet_weight /= total_weight
+            ce_weight /= total_weight
+
+            triplet_loss *= triplet_weight
+            ce_loss *= triplet_weight
 
         total_loss = triplet_loss + ce_loss
 
