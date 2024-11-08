@@ -1018,7 +1018,6 @@ class DataDistiller:
                     self._save_triplets(df=df, epoch=epoch)
                 else:
                     self.train_dataloader = self._mine(p, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
-                    self._save_triplets(df=self.train_dataloader.dataset.df, epoch=epoch)
             
             # load previous epoch's checkpoint
             self._load_checkpoint(epoch)
