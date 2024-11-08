@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch
 
 class TripletClassificationLoss(nn.Module):
-    def __init__(self, margin=1.0, p_norm=2, use_label_smoothing=False, smoothing=0.1):
+    def __init__(self, margin=1.0, p_norm=2, use_label_smoothing=False, smoothing=0.1, use_dynamic_weighting=False, epsilon=1e-8):
         '''
         Initializes an instance of the TripletClassificationLoss class.
 
@@ -18,7 +18,10 @@ class TripletClassificationLoss(nn.Module):
 
         super(TripletClassificationLoss, self).__init__()
 
-        self.__version__ = '0.1.0'
+        self.__version__ = '0.2.0'
+
+        self.use_dynamic_weighting = use_dynamic_weighting
+        self.epsilon = epsilon
 
         self.triplet_loss = TripletLoss(margin=margin, p_norm=p_norm)
         if not use_label_smoothing:
@@ -47,6 +50,10 @@ class TripletClassificationLoss(nn.Module):
         
         triplet_loss = self.triplet_loss(z_anchor, z_positive, z_negative)
         ce_loss = self.ce_loss(y_prob, y_true)
+
+        if self.use_dynamic_weighting:
+            triplet_loss /= (triplet_loss + self.epsilon)
+            ce_loss /= (ce_loss + self.epsilon)
 
         total_loss = triplet_loss + ce_loss
 
