@@ -197,6 +197,8 @@ class DataDistiller:
             debug: adds print statements to the function when true.
         '''
 
+        self.embed_dim = embed_dim
+
         self.embeddings = dict()
         self.id_str2int = dict()
 
@@ -605,7 +607,20 @@ class DataDistiller:
                     z_anchor, z_positive, z_negative, Y = self.model(anchor, positive, negative)
 
                     if replace_embeds:
-                        self.embeddings[anchor_id][anchor_path] = z_anchor.item().flatten().to_list()
+                        anchor_embeds = self.proj(z_anchor)
+                        
+
+                        # store the embeddings and identity integers
+                        for i in range(len(identities)):
+                            identity, path, embed = identities[i], paths[i], embeds[i]
+
+                            if identity not in self.embeddings:
+                                self.embeddings[identity] = dict()
+                            if identity not in self.id_str2int:
+                                self.id_str2int[identity] = len(self.id_str2int)
+                            
+                            self.embeddings[identity][path] = embed
+                        self.embeddings[anchor_id][anchor_path] = s
                         self.embeddings[positive_id][positive_path] = z_positive.item().flatten().to_list()
                         self.embeddings[negative_id][negative_path] = z_negative.item().flatten().to_list()
 
@@ -960,6 +975,8 @@ class DataDistiller:
     def _load_id_str2int(self) -> None:
         '''
         Loads the id_str2int dictionary previously stored in a JSON file.
+
+        Inputs: None.
         '''
 
         id_str2int_path = self.embeddings_dir + '/id_str2int.json'
@@ -1018,6 +1035,23 @@ class DataDistiller:
                     self._save_triplets(df=df, epoch=epoch)
                 else:
                     self.train_dataloader = self._mine(p, self.p_max, self.margin, epoch, self.max_attempts, self.transform)
+
+            if p > self.thetas[0]:
+                try:
+                    _ = type(self.proj)
+                except AttributeError:
+                    _, _, _, _, _, _, anchor, _, _, _ = next(iter(self.train_dataloader))
+
+                    out_dim = self.model(torch.unsqueeze(anchor, dim=0))[0].flatten(start_dim=0)
+
+                    weights = torch.randn(self.embed_dim, out_dim)
+                    weights = weights / (np.sqrt(self.embed_dim) * torch.norm(weights, dim=0, keepdim=True))
+
+                    self.proj = nn.Linear(out_dim, self.embed_dim, bias=False)
+                    self.proj.weight.copy_(weights)
+
+                    if self.device == 'gpu' and torch.cuda.is_available():
+                        self.proj = self.proj.to(device=self.gpu_id)
             
             # load previous epoch's checkpoint
             self._load_checkpoint(epoch)
