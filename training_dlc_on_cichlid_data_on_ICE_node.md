@@ -567,21 +567,29 @@ If accuracies of DeepLabCut's default re-ID training pipeline is low, it might d
 
 ## Experiment: transformer re-identification model “with images”
 In this experiment, each triplet is augmented with image crops of the anchor, positive, negative fish assemblies before being passed into a transformer re-ID model. Hence, this experiment is now referred to as re-ID "with images." This approach was first proposed and tested by Adam Thomas (summer 2024) on DeepLabCut’s TensorFlow engine and replicated by Thuan Nguyen on DeepLabCut’s newer PyTorch engine. (The TensorFlow engine is being deprecated.) Please contact these team members for further clarifications.
+
 A major downside is that this approach, which utilizes a Vision Transformer (ViT) to extract features from image crops, would take a very long time, compared to the default DeepLabCut transformer re-ID which takes minutes to train. Thus, this experiment serves mainly to demonstrate that re-ID tasks might be achieved with visual features from image crops. (But note that we need DeepLabCut to extract the fish assemblies, and only from the assemblies can we determine the image crops or bounding boxes of the fish.)
 ### Background
 Specifically, for each fish, in addition to the DeepLabCut-generated feature set (from 9 keypoints, as explained above), Adam also added a small image patch around that fish that is cropped from the original video frame. He passed that fish-image crop through a preprocessor of a Vision Transformer and concatenated the output with the DeepLabCut-generated feature set for that fish.
+
 In other words, Adam prepared the features (before training) by adding a crop of image for each fish, on top of DeepLabCut-generated features. Then, when it comes to training, Adam extended the original DeepLabCut transformer model by adding a Vision Transformer on top of it. For each fish, the DeepLabCut-generated features are forwarded through the original DeepLabCut transformer model, while the image patch is passed through the Vision Transformer model. 
+
 The output of Adam’s modified model is projected to be 1024-dimensional at the end and passed to the triplet loss as in the default DeepLabCut implementation. 
+
 In summary, Adam’s approach incorporates the image patches of the anchor, positive, and negative fish into whatever DeepLabCut extracted for those fish, and train a transformer with triplet loss on the concatenated features for the 3 fish.
 ### Implementation
 To replicate this experiment in DeepLabCut’s newer PyTorch engine, we need to download this `behavior_detection` package on HAAG GitHub: https://github.com/Human-Augment-Analytics/CichlidBowerTracking/tree/master/cichlid_bower_tracking/transformer_re-ID_for_DLC_pytorch_engine/transformer_re-ID_with_images/behavior_detection 
+
 The main script is here: https://github.com/Human-Augment-Analytics/CichlidBowerTracking/blob/master/cichlid_bower_tracking/transformer_re-ID_for_DLC_pytorch_engine/transformer_re-ID_with_images/training_transformer_reID_with_images.py 
+
 (please note that in this script, we’ll need to import modules from the `behavior_detection` package. So we’ll need to append the path to where we downloaded `behavior_detection` package (the parent folder containing this package), so that the `sys` module in Python can import properly. That’s why we need this line, for example, in the main script:
 ```
 sys.path.append("/home/hice1/tnguyen868/scratch/dlc_dataset/cichlid-behavior-detection/")
 ```
 The credit for the `behavior_detection` package and the majority of the code in the `training_transformer_reID_with_images.py` script goes to Adam Thomas. Adam initially wrote the code for this experiment on DeepLabCut’s TensorFlow engine, and the code can be found on Adam’s repo: https://github.com/athomas125/cichlid-behavior-detection/tree/main/behavior_detection 
+
 The `behavior_detection` package and the `training_transformer_reID_with_images.py` file that we’re using here are adapted from Adam’s version in order to work on DeepLabCut’s Tensorflow engine.
+
 To start re-ID training using this approach, first scroll down to the bottom of ` training_transformer_reID_with_images.py` and set several constants before the `transformer_reID_with_image()` function call.
 ```
     # Dimensionality of the feature vectors used in the re-identification model – must be the number of channels in the last backbone layer of the DeepLabCut neural networks. Defaults to 2048
@@ -590,7 +598,7 @@ To start re-ID training using this approach, first scroll down to the bottom of 
     # Number of keypoints (e.g., anatomical landmarks) detected and utilized for the model
     NUM_KPTS = 9
 
-…
+    …
 
     # Path to the training data file containing triplet vector data for model training
     training_data_filename = "/home/hice1/tnguyen868/scratch/dlc_dataset/dlc_test1/temp4/0001_vid_test4DLC_Resnet50_dlc_modelJul26shuffle1_snapshot_200_triplet_vector.npy"
@@ -635,6 +643,7 @@ Epoch 50, test acc 0.88
 ```
 ### Further notes on Adam’s code
 If you’re curious where this “with-images” approach can be found in code, please read on for some explanations. Adam's approach was integrating small image patches of each fish alongside DeepLabCut's 2048-dimensional features extracted for the 9 keypoints. The patches were cropped from the original video and processed through a Vision Transformer (ViT). These image patch features were concatenated with the keypoint features, enhancing the feature representation for re-ID tasks. This combination helped encode additional visual context about the fish.
+
 That part is done through Adam’s addition that he added to the triplet dataset creation function of DeepLabCut (line 134 here: https://github.com/athomas125/cichlid-behavior-detection/blob/fcdbfcc6abf74bd88f66fe63c93ff30f2efc736c/behavior_detection/transformer_training/make_img_triplet_dataset.py#L134C1-L156C17 ) 
 ```
     cap = cv2.VideoCapture(video_path)
@@ -663,7 +672,9 @@ That part is done through Adam’s addition that he added to the triplet dataset
 ```
 
 Adam added a ViT feature extractor to the DeepLabCut pipeline. This feature extractor processed image crops and output embeddings that were concatenated with the base DeepLabCut keypoint features. As you can see below, Adam defined the feature extractor (i.e. a Vision Transformer) in the `__init__` of the model: https://github.com/athomas125/cichlid-behavior-detection/blob/fcdbfcc6abf74bd88f66fe63c93ff30f2efc736c/behavior_detection/transformer_training/make_model_dlc_and_image.py#L66C5-L74C84 
+
 A final fully connected layer (`self.final_fc`) projected the combined features (keypoints + image embeddings) into a 1024-dimensional vector for triplet loss training. The addition of ViT made the model significantly more expressive but also computationally intensive.
+
 (last 3 lines)
 ```
 def __init__(self, cfg, in_chans, kpt_num, factory, feature_extractor, feature_extractor_in_shape, feature_extractor_out_dim):
