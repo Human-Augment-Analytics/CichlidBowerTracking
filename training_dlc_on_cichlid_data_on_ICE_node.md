@@ -477,21 +477,35 @@ Creating the triplet dataset...
 Creating the triplet dataset... DONE
 
 Training transformer re-identification model...
-Epoch 10, train acc: 0.58
-Epoch 10, test acc 0.52
-Epoch 20, train acc: 0.61
-Epoch 20, test acc 0.54
-…
-Epoch 90, train acc: 0.62
-Epoch 90, test acc 0.51
-Epoch 100, train acc: 0.62
-Epoch 100, test acc 0.53
+Epoch 10, train acc: 0.99
+Epoch 10, test acc 0.94
+Epoch 20, train acc: 0.99
+Epoch 20, test acc 0.94
+Epoch 30, train acc: 1.00
+Epoch 30, test acc 0.98
+Epoch 40, train acc: 1.00
+Epoch 40, test acc 0.98
+Epoch 50, train acc: 1.00
+Epoch 50, test acc 0.97
+Epoch 60, train acc: 1.00
+Epoch 60, test acc 0.98
+Epoch 70, train acc: 1.00
+Epoch 70, test acc 0.98
+Epoch 80, train acc: 1.00
+Epoch 80, test acc 0.98
+Epoch 90, train acc: 1.00
+Epoch 90, test acc 0.97
+Epoch 100, train acc: 1.00
+Epoch 100, test acc 0.97
+
 
 Transformer re-ID checkpoint saved: <model folder>/dlc_transreid_100.pth
 
 Now running deeplabcut.stitch_tracklets()
 …
 ```
+Please note that if the accuracies are low, it could be due to a bug in DeepLabCut's code. Please refer to the note below about this bug.
+
 ### Explanations
 #### Recap
 To recap, when you have a video to do DeepLabCut inference on by `deeplabcut.analyze_videos()` (as described above). Several files will be created.
@@ -530,3 +544,23 @@ The add-on code in ` generate_bodypart_features_file.py` above does just that. I
 
 Instead, the code loads up a new instance of the trained DeepLabCut model, set it to evaluation mode, re-run the video again as a forward pass, but stop after the ResNet backbone layer to extract the necessary features and ultimately save into a `_bpt_features.pickle` file. Once the right file has been created, then the other components can be adapted (triplet dataset creation, model building, training, etc.) almost intact from DeepLabCut’s code.
 
+Please note that the accuracy displayed during traininng is computed on the test set of triplets by following this process: For each triplet (with anchor, positive, and negative examples) in the test set,
+- Compute the embeddings of the anchor, positive, and negative examples.
+- If the distance between the anchor and the positive example is less than the distance between the anchor and the negative example, the model is considered "correct" for that triplet.
+- The overall accuracy is the proportion of correct predictions across all triplets.
+- 
+This logic is implemented in the following function:
+```
+def calc_correct(anchor, pos, neg):
+    # cos = torch.cdist
+    ap_dist = dist(anchor, pos)
+    an_dist = dist(anchor, neg)
+    indices = ap_dist < an_dist
+
+    return torch.sum(indices)
+```
+In other words, it's not the accuracy against the ground-truth fish identities, which we don't have in the videos that are used from the start of this guide.
+
+#### Potential bug (as of December 2024)
+
+If accuracies of DeepLabCut's default re-ID training pipeline is low, it might due to a bug in DeepLabCut’s code. After fixing this bug, this transformer re-ID pipeline should get >95% accuracies. The bug was in how the code retrieved the ResNet 2048-dimensional features that belong to triplets. Please see further details in this issue raised to the DeepLabCut team on GitHub: https://github.com/DeepLabCut/DeepLabCut/issues/2794. For further questions, please contact Thuan Nguyen.
