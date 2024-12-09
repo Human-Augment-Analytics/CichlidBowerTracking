@@ -2,6 +2,8 @@
 
 In this folder are some add-on scripts for training a transformer re-ID model, which is implemented for DeepLabCut TensorFlow engine but has not been implemented in DeepLabCut v3.0 PyTorch engine (as of November 2024).
 
+Please be sure to check out this file for the entire process, including the steps that should happen before re-ID model training: https://github.com/Human-Augment-Analytics/CichlidBowerTracking/blob/master/training_dlc_on_cichlid_data_on_ICE_node.md
+
 Please download these two files into a folder: `generate_bodypart_features_file.py` and `transformer_reID_for_pytorch_engine.py`. (See further explanations below.)
 
 Then in the same folder, you can run your own script like below, calling `transformer_reID()` function not as imported from `deeplabcut` but from `transformer_reID_for_pytorch_engine`.
